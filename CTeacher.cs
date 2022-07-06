@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
 using NSUci;
@@ -12,14 +8,14 @@ namespace NSProgram
 	class CTData
 	{
 		public bool finished = true;
-		public string moves = String.Empty;
+		public string fen = String.Empty;
 		public byte depth = 0;
 		public short score = 0;
 
 		public void Assign(CTData td)
 		{
 			finished = td.finished;
-			moves = td.moves;
+			fen = td.fen;
 			depth = td.depth;
 			score = td.score;
 		}
@@ -70,7 +66,7 @@ namespace NSProgram
 					if (uci.GetValue("cp", out string value))
 					{
 						CTData td = GetTData();
-						int v = Convert.ToInt32(value);
+						int v = -Convert.ToInt32(value);
 						if (v > valMax)
 							v = valMax;
 						if (v < valMin)
@@ -82,7 +78,7 @@ namespace NSProgram
 					if (uci.GetValue("mate", out string mate))
 					{
 						CTData td = GetTData();
-						int v = Convert.ToInt32(mate);
+						int v = -Convert.ToInt32(mate);
 						if (v > 0)
 						{
 							v = short.MaxValue - v;
@@ -106,11 +102,7 @@ namespace NSProgram
 		void TeacherWriteLine(string c)
 		{
 			if (teacherProcess != null)
-				if (!teacherProcess.HasExited)
-				{
 					teacherProcess.StandardInput.WriteLine(c);
-					teacherProcess.StandardInput.Flush();
-				}
 		}
 
 		public void TeacherTerminate()
@@ -123,16 +115,18 @@ namespace NSProgram
 			}
 		}
 
-		public void Start(string moves, int depth)
+		public void Start(string fen, int depth)
 		{
+			if (String.IsNullOrEmpty(fen) || (depth > 0xff))
+				return;
 			if (depth < 0xf)
 				depth = 0xf;
 			CTData td = new CTData();
 			td.finished = false;
-			td.moves = moves;
+			td.fen = fen;
 			td.depth = (byte)depth;
 			SetTData(td);
-			TeacherWriteLine($"position startpos moves {moves}");
+			TeacherWriteLine($"position fen {fen}");
 			TeacherWriteLine($"go depth {depth}");
 		}
 

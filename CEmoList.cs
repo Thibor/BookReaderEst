@@ -28,13 +28,23 @@ namespace NSProgram
 
 		public byte GetDepth()
 		{
-			byte r = 0xff;
+			int r = 0xffff;
 			foreach (CEmo e in this)
-				if (r > e.rec.depth)
+				if ((r > e.rec.depth) && (e.rec.depth > 0))
 					r = e.rec.depth;
-			return r;
+			if (r == 0xffff)
+				return 0;
+			return (byte)r;
 		}
-		
+
+		public short GetScore()
+		{
+			foreach (CEmo e in this)
+				if (e.rec.depth > 0)
+					return e.rec.score;
+			return 0;
+		}
+
 		public CEmo GetEmo(int emo)
 		{
 			foreach (CEmo e in this)

@@ -305,7 +305,7 @@ namespace NSProgram
 		{
 			string[] lines = File.ReadAllLines(p);
 			foreach (string uci in lines)
-				AddUci(uci, out _);
+				AddUci(uci);
 		}
 
 		void AddFilePgn(string p)
@@ -323,7 +323,7 @@ namespace NSProgram
 				cm = Regex.Replace(cm, @"\.(?! |$)", ". ");
 				if (cm.StartsWith("1. "))
 				{
-					AddUci(movesUci, out _);
+					AddUci(movesUci);
 					ShowMoves();
 					movesUci = String.Empty;
 					chess.SetFen();
@@ -344,7 +344,7 @@ namespace NSProgram
 					chess.MakeMove(emo);
 				}
 			}
-			AddUci(movesUci, out _);
+			AddUci(movesUci);
 			ShowMoves();
 		}
 
@@ -372,9 +372,9 @@ namespace NSProgram
 			return UpdateBack(moves.ToArray());
 		}
 
-		public int UpdateBack(string[] moves,bool add = false)
+		public int UpdateBack(string[] moves)
 		{
-		
+
 			int result = 0;
 			List<CRec> lr = new List<CRec>();
 			chess.SetFen();
@@ -385,17 +385,9 @@ namespace NSProgram
 					CRec rec = recList.GetRec(tnt);
 					if (rec != null)
 						lr.Add(rec);
-					else
-					{
-						log.Add($"UpdateBack GetRec ({uci})({tnt})");
-						return 0;
-					}
+					else return 0;
 				}
-				else
-				{
-					log.Add("UpdateBack MakeMove");
-					return 0;
-				}
+				else return 0;
 			for (int n = lr.Count - 2; n >= 0; n--)
 				result += UpdateRec(lr[n]);
 			return result;
@@ -409,33 +401,35 @@ namespace NSProgram
 			CEmoList emoList = GetEmoList();
 			if (emoList.Count > 0)
 			{
-				int score = -emoList[0].rec.score;
 				byte depth = emoList.GetDepth();
-				if (depth < 0xff)
-					depth++;
-				if ((rec.score != score) || (rec.depth != depth))
+				if (depth > 0)
 				{
-					rec.score = (short)score;
-					rec.depth = depth;
-					return 1;
+					int score = -emoList.GetScore();
+					if (depth < 0xff)
+						depth++;
+					if ((rec.score != score) || (rec.depth != depth))
+					{
+						rec.score = (short)score;
+						rec.depth = depth;
+						return 1;
+					}
 				}
 			}
 			return 0;
 		}
 
-		public int AddUci(string moves, out string uci, int limitLen = 0, int limitAdd = 0)
+		public int AddUci(string moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.Trim().Split(' '), out uci, limitLen, limitAdd);
+			return AddUci(moves.Trim().Split(' '), age, limitLen, limitAdd);
 		}
 
-		public int AddUci(List<string> moves, out string uci, int limitLen = 0, int limitAdd = 0)
+		public int AddUci(List<string> moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.ToArray(), out uci, limitLen, limitAdd);
+			return AddUci(moves.ToArray(), age, limitLen, limitAdd);
 		}
 
-		public int AddUci(string[] moves, out string uci, int limitLen = 0, int limitAdd = 0)
+		public int AddUci(string[] moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
-			uci = String.Empty;
 			int ca = 0;
 			if ((limitLen == 0) || (limitLen > moves.Length))
 				limitLen = moves.Length;
@@ -443,19 +437,18 @@ namespace NSProgram
 			for (int n = 0; n < limitLen; n++)
 			{
 				string m = moves[n];
-				uci += $" {m}";
 				if (chess.MakeMove(m, out _))
 				{
 					CRec rec = new CRec
 					{
 						tnt = chess.GetTnt()
 					};
-					if (recList.AddRec(rec))
+					if (recList.AddRec(rec, age))
 						ca++;
 					if ((limitAdd > 0) && (ca >= limitAdd))
 						break;
 				}
-				else 
+				else
 					break;
 			}
 			return ca;
@@ -511,7 +504,7 @@ namespace NSProgram
 		{
 			string ext = Path.GetExtension(p).ToLower();
 			if (ext == defExt)
-				return SaveToTnt(p);
+				return SaveToEst(p);
 			if (ext == ".uci")
 				return SaveToUci(p);
 			if (ext == ".pgn")
@@ -546,7 +539,7 @@ namespace NSProgram
 			{
 				foreach (CRec rec in recList)
 				{
-					string l = $"{rec.tnt}{rec.score.ToString("+#;-#;+0")}";
+					string l = $"{rec.tnt}{rec.score:+#;-#;+0}";
 					sw.WriteLine(l);
 					Console.Write($"\rRecord {++line}");
 				}
@@ -555,11 +548,12 @@ namespace NSProgram
 			return true;
 		}
 
-		public bool SaveToTnt(string p)
+		public bool SaveToEst(string p)
 		{
 			string pt = p + ".tmp";
 			RefreshAge();
 			int maxAge = GetMaxAge();
+			int empty = 0;
 			Program.deleted = 0;
 			if (maxRecords > 0)
 				Program.deleted = recList.Count - maxRecords;
@@ -578,6 +572,8 @@ namespace NSProgram
 						writer.Write(GetHeader());
 						foreach (CRec rec in recList)
 						{
+							if (rec.depth == 0)
+								empty++;
 							if (rec.tnt == lastTnt)
 							{
 								Program.deleted++;
@@ -621,7 +617,7 @@ namespace NSProgram
 			if (Program.deleted > 0)
 				Console.WriteLine($"log book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
 			if (Program.isLog && (maxAge > 0))
-				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} max {maxAge}");
+				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} empty {empty} max {maxAge}");
 			return true;
 		}
 
@@ -753,7 +749,7 @@ namespace NSProgram
 			return umo;
 		}
 
-		public void ShowLevel(int lev, int len)
+		public void ShowLevel(int lev)
 		{
 			int ageMax = AgeMax();
 			int ageMin = AgeMin();
@@ -763,29 +759,28 @@ namespace NSProgram
 				del = ageCou - ageMin;
 			if (ageCou > ageMax)
 				del = ageCou - ageMax;
-			Console.WriteLine("{0,4} {1," + len + "} {2," + len + "}", lev, arrAge[lev], del);
+			Console.WriteLine("{0,4} {1,5} {2,5}", lev, arrAge[lev], del);
 		}
 
 		public void InfoStructure()
 		{
-			int len = recList.Count.ToString().Length;
 			int ageAvg = AgeAvg();
 			int ageMax = AgeMax();
 			int ageMin = AgeMin();
 			int ageDel = AgeDel();
 			Console.WriteLine($"moves {recList.Count:N0} min {ageMin:N0} avg {ageAvg:N0} max {ageMax:N0} delta {ageDel:N0}");
-			Console.WriteLine("{0,4} {1," + len + "} {2," + len + "}", "age", "count", "delta");
+			Console.WriteLine("{0,4} {1,5} {2,5}", "age", "count", "delta");
 			Console.WriteLine();
 			RefreshAge();
-			ShowLevel(0, len);
+			ShowLevel(0);
 			for (int n = 1; n < 0xff; n++)
 			{
 				if ((arrAge[n] > ageMax) || (arrAge[n] < ageMin))
-					ShowLevel(n, len);
+					ShowLevel(n);
 				if (arrAge[n] == 0)
 					break;
 			}
-			ShowLevel(255, len);
+			ShowLevel(255);
 		}
 
 		public void InfoMoves(string moves)
@@ -812,7 +807,7 @@ namespace NSProgram
 			}
 		}
 
-		List<string> GetGames(int limit =0)
+		List<string> GetGames(int limit = 0)
 		{
 			List<string> sl = new List<string>();
 			if (branchList.Start(limit))
@@ -836,14 +831,18 @@ namespace NSProgram
 			Program.deleted = 0;
 			int up = recList.Count;
 			int max;
+			int zero;
 			do
 			{
 				int line = 0;
 				max = up;
 				up = 0;
+				zero = 0;
 				foreach (CRec rec in recList)
 				{
 					up += UpdateRec(rec);
+					if (rec.depth == 0)
+						zero++;
 					Console.Write($"\rupdate {(++line * 100.0 / recList.Count):N4}%");
 				}
 				Program.updated += up;
@@ -851,7 +850,7 @@ namespace NSProgram
 				Console.WriteLine($"Updated {up:N0}");
 				SaveToFile();
 			} while ((max > up) && (up > 0));
-			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
+			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} zero {zero}");
 		}
 
 	}

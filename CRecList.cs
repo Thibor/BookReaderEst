@@ -17,7 +17,7 @@ namespace NSProgram
 	{
 		readonly static Random rnd = new Random();
 
-		public bool AddRec(CRec rec, bool update = false)
+		public bool AddRec(CRec rec, bool age = false)
 		{
 			int index = FindTnt(rec.tnt);
 			if (index == Count)
@@ -27,12 +27,8 @@ namespace NSProgram
 				CRec r = this[index];
 				if (r.tnt == rec.tnt)
 				{
-					if (update)
-					{
+					if (age)
 						r.age = rec.age;
-						r.score = rec.score;
-						r.depth = rec.depth;
-					}
 					return false;
 				}
 				else
@@ -87,7 +83,7 @@ namespace NSProgram
 					return last;
 				int middle = (first + last) >> 1;
 				CRec rec = this[middle];
-				int c = String.Compare(tnt, rec.tnt);
+				int c = String.Compare(tnt, rec.tnt, StringComparison.Ordinal);
 				if (c < 0)
 					last = middle;
 				else if (c > 0)
@@ -108,7 +104,7 @@ namespace NSProgram
 		public CRec RecBst()
 		{
 			CRec bst = null;
-			byte depth = 0xff;
+			int depth = 0xffff;
 			foreach (CRec rec in this)
 				if (depth > rec.depth)
 				{
@@ -174,7 +170,7 @@ namespace NSProgram
 		{
 			Sort(delegate (CRec r1, CRec r2)
 			{
-				return String.Compare(r1.tnt, r2.tnt);
+				return String.Compare(r1.tnt, r2.tnt, StringComparison.Ordinal);
 			});
 		}
 

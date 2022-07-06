@@ -19,7 +19,7 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookAdd = 7;
+		public static int bookAdd = 1;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
@@ -45,13 +45,13 @@ namespace NSProgram
 			/// Number of moves not found in a row.
 			/// </summary>
 			int emptyRow = 0;
+			int emptyTotal = 0;
 			/// <summary>
 			/// Random moves factor.
 			/// </summary>
 			int bookRandom = 60;
 			string lastFen = String.Empty;
 			string lastMoves = String.Empty;
-			string lastUci = String.Empty;
 			CUci Uci = new CUci();
 			CTeacher teacher = new CTeacher();
 			string ax = "-bn";
@@ -150,12 +150,8 @@ namespace NSProgram
 				engineProcess.Start();
 				Console.WriteLine($"info string engine on");
 			}
-			else
-			{
-				if (engineFile != String.Empty)
-					Console.WriteLine($"info string missing engine  [{engineFile}]");
-				engineFile = String.Empty;
-			}
+			else if (engineFile != String.Empty)
+				Console.WriteLine($"info string missing engine  [{engineFile}]");
 
 
 			if (teacher.SetTeacher(teacherFile))
@@ -170,7 +166,7 @@ namespace NSProgram
 				bookLimitR = 0;
 				bookLimitW = 0;
 			}
-			if(isInfo)
+			if (isInfo)
 				book.InfoMoves("");
 			do
 			{
@@ -210,7 +206,7 @@ namespace NSProgram
 							else Console.WriteLine("File not found");
 							break;
 						case "adduci":
-							book.AddUci(Uci.GetValue(2, 0),out _);
+							book.AddUci(Uci.GetValue(2, 0));
 							Console.WriteLine($"{(book.recList.Count - count):N0} moves have been added");
 							break;
 						case "clear":
@@ -263,14 +259,13 @@ namespace NSProgram
 								bookUpdate = isW;
 								bookWrite = isW;
 								emptyRow = 0;
+								emptyTotal = 0;
 								added = 0;
 								updated = 0;
 								deleted = 0;
-								lastUci = String.Empty;
 							}
 							if (bookLoaded && bookWrite && book.chess.Is2ToEnd(out string myMove, out string enMove))
 							{
-								bookChanged = true;
 								bookUpdate = false;
 								string[] am = lastMoves.Split(' ');
 								List<string> movesUci = new List<string>();
@@ -278,7 +273,8 @@ namespace NSProgram
 									movesUci.Add(m);
 								movesUci.Add(myMove);
 								movesUci.Add(enMove);
-								added += book.AddUci(movesUci, out lastUci, 0, bookAdd);
+								bookChanged = true;
+								added += book.AddUci(movesUci, true, 0, bookAdd);
 							}
 						}
 						break;
@@ -292,46 +288,42 @@ namespace NSProgram
 							if (bookLoaded && isW && String.IsNullOrEmpty(lastFen) && (emptyRow > 0) && (emptyRow < bookAdd))
 							{
 								bookChanged = true;
-								added += book.AddUci(lastMoves, out lastUci);
+								added += book.AddUci(lastMoves);
 							}
 							emptyRow = 0;
 						}
 						else
 						{
 							emptyRow++;
-							bool upBack = true;
+							emptyTotal++;
 							if (bookLoaded && teacher.ready)
 							{
 								CTData td = teacher.GetTData();
 								if (td.finished)
 								{
-									if (!String.IsNullOrEmpty(td.moves))
+									if (!String.IsNullOrEmpty(td.fen))
 									{
-										book.chess.SetFen();
-										book.chess.MakeMoves(td.moves);
+										book.chess.SetFen(td.fen);
 										string tnt = book.chess.GetTnt();
 										CRec rec = book.recList.GetRec(tnt);
 										rec.score = td.score;
 										rec.depth = td.depth;
-										book.UpdateBack(td.moves);
-										upBack = false;
+										bookUpdate = false;
 										bookChanged = true;
 									}
 									td.finished = false;
-									if (String.IsNullOrEmpty(lastUci))
-										td.moves = book.GetFlat();
-									else
-									{
-										td.moves = lastUci;
-										lastUci = String.Empty;
-									}
+									td.fen = String.Empty;
 									teacher.SetTData(td);
 									CRec bst = book.recList.RecBst();
-									if (!String.IsNullOrEmpty(td.moves))
-										teacher.Start(td.moves, bst.depth + 1);
+									if (bst != null)
+									{
+										book.chess.SetTnt(bst.tnt);
+										string fen = book.chess.GetFen();
+										teacher.Start(fen, bst.depth + 1);
+									}
 								}
 							}
-							if (bookUpdate && upBack)
+							if (bookUpdate)
 							{
 								int up = 0;
 								if (emptyRow == 1)

@@ -43,7 +43,7 @@ namespace NSChess
 		const int maskColor = colorBlack | colorWhite;
 		public int g_castleRights = 0xf;
 		ulong g_hash = 0;
-		protected int g_passing = 0;
+		public int g_passing = 0;
 		public int g_move50 = 0;
 		public int g_moveNumber = 0;
 		public bool g_inCheck = false;

@@ -144,6 +144,7 @@ namespace NSProgram
 			g_castleRights = 0;
 			g_lastCastle = 0;
 			g_passing = 0;
+			g_moveNumber = 0;
 			for (int n = 0; n < tnt.Length; n++)
 			{
 				int index = arrField[n];
@@ -153,7 +154,7 @@ namespace NSProgram
 				{
 					case 'a':
 						piece |= piecePawn;
-						g_passing = index;
+						g_passing = index - 16;
 						break;
 					case 'p':
 						piece |= piecePawn;
