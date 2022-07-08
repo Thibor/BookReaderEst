@@ -19,7 +19,7 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookAdd = 1;
+		public static int bookAdd = 3;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
@@ -34,7 +34,6 @@ namespace NSProgram
 		static void Main(string[] args)
 		{
 			bool bookChanged = false;
-			bool bookUpdate = false;
 			bool bookWrite = false;
 			bool isInfo = false;
 			/// <summary>
@@ -168,6 +167,8 @@ namespace NSProgram
 			}
 			if (isInfo)
 				book.InfoMoves("");
+
+	
 			do
 			{
 				string msg = Console.ReadLine().Trim();
@@ -256,7 +257,6 @@ namespace NSProgram
 							if (book.chess.g_moveNumber < 2)
 							{
 								bookChanged = false;
-								bookUpdate = isW;
 								bookWrite = isW;
 								emptyRow = 0;
 								emptyTotal = 0;
@@ -266,7 +266,6 @@ namespace NSProgram
 							}
 							if (bookLoaded && bookWrite && book.chess.Is2ToEnd(out string myMove, out string enMove))
 							{
-								bookUpdate = false;
 								string[] am = lastMoves.Split(' ');
 								List<string> movesUci = new List<string>();
 								foreach (string m in am)
@@ -275,6 +274,7 @@ namespace NSProgram
 								movesUci.Add(enMove);
 								bookChanged = true;
 								added += book.AddUci(movesUci, true, 0, bookAdd);
+								updated += book.UpdateBack(movesUci);
 							}
 						}
 						break;
@@ -289,6 +289,7 @@ namespace NSProgram
 							{
 								bookChanged = true;
 								added += book.AddUci(lastMoves);
+								updated += book.UpdateBack(lastMoves);
 							}
 							emptyRow = 0;
 						}
@@ -296,60 +297,48 @@ namespace NSProgram
 						{
 							emptyRow++;
 							emptyTotal++;
-							if (bookLoaded && teacher.ready)
-							{
-								CTData td = teacher.GetTData();
-								if (td.finished)
-								{
-									if (!String.IsNullOrEmpty(td.fen))
-									{
-										book.chess.SetFen(td.fen);
-										string tnt = book.chess.GetTnt();
-										CRec rec = book.recList.GetRec(tnt);
-										rec.score = td.score;
-										rec.depth = td.depth;
-										bookUpdate = false;
-										bookChanged = true;
-									}
-									td.finished = false;
-									td.fen = String.Empty;
-									teacher.SetTData(td);
-									CRec bst = book.recList.RecBst();
-									if (bst != null)
-									{
-										book.chess.SetTnt(bst.tnt);
-										string fen = book.chess.GetFen();
-										teacher.Start(fen, bst.depth + 1);
-									}
-								}
-							}
-							if (bookUpdate)
-							{
-								int up = 0;
-								if (emptyRow == 1)
-									up += book.UpdateBack(lastMoves);
-								else
-								{
-									CRec rec = book.recList.RecRnd();
-									up += book.UpdateRec(rec);
-								}
-								if (up > 0)
-								{
-									bookChanged = true;
-									updated += up;
-								}
-							}
 							if (engineProcess == null)
 								Console.WriteLine("enginemove");
 							else
 								engineProcess.StandardInput.WriteLine(msg);
 						}
-						if (bookChanged)
-						{
-							bookChanged = false;
-							book.SaveToFile();
-						}
 						break;
+				}
+				if (bookLoaded && teacher.ready)
+				{
+					teacher.time++;
+					CTData td = teacher.GetTData();
+					if (td.finished)
+					{
+						if (!String.IsNullOrEmpty(td.moves))
+						{
+							book.chess.SetFen();
+							book.chess.MakeMoves(td.moves);
+							string tnt = book.chess.GetTnt();
+							CRec rec = book.recList.GetRec(tnt);
+							rec.score = td.score;
+							rec.depth = td.depth;
+							book.UpdateBack(td.moves);
+							bookChanged = true;
+						}
+						td.finished = false;
+						td.moves = book.GetFlat();
+						teacher.SetTData(td);
+						if (td.moves != String.Empty)
+						{
+							book.chess.SetFen();
+							book.chess.MakeMoves(td.moves);
+							string tnt = book.chess.GetTnt();
+							CRec bst = book.recList.GetRec(tnt);
+							book.log.Add($"{td.moves} D {bst.depth}");
+							teacher.Start(td.moves, bst.depth + 1);
+						}
+					}
+					if (bookChanged)
+					{
+						bookChanged = false;
+						book.SaveToFile();
+					}
 				}
 			} while (Uci.command != "quit");
 			teacher.TeacherTerminate();

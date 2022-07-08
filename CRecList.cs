@@ -93,26 +93,14 @@ namespace NSProgram
 			}
 		}
 
-		public CRec RecRnd()
+		public CRec RecFlat()
 		{
-			int index = rnd.Next(Count);
-			if (index < Count)
-				return this[index];
-			return null;
-		}
-
-		public CRec RecBst()
-		{
-			CRec bst = null;
-			int depth = 0xffff;
+			if (Count == 0)
+				return null;
+			CRec bst = this[0];
 			foreach (CRec rec in this)
-				if (depth > rec.depth)
-				{
-					depth = rec.depth;
+				if ((bst.depth > rec.depth) || ((bst.depth == rec.depth) && (bst.age > rec.age)))
 					bst = rec;
-					if (depth == 0)
-						return bst;
-				}
 			return bst;
 		}
 
@@ -160,9 +148,7 @@ namespace NSProgram
 			while (n > 1)
 			{
 				int k = rnd.Next(n--);
-				CRec value = this[k];
-				this[k] = this[n];
-				this[n] = value;
+				(this[n], this[k]) = (this[k], this[n]);
 			}
 		}
 
@@ -179,6 +165,15 @@ namespace NSProgram
 			Sort(delegate (CRec r1, CRec r2)
 			{
 				return r1.age - r2.age;
+			});
+		}
+
+		public void SortDepth()
+		{
+			Shuffle();
+			Sort(delegate (CRec r1, CRec r2)
+			{
+				return r1.depth - r2.depth;
 			});
 		}
 

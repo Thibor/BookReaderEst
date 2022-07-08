@@ -8,14 +8,14 @@ namespace NSProgram
 	class CTData
 	{
 		public bool finished = true;
-		public string fen = String.Empty;
+		public string moves = String.Empty;
 		public byte depth = 0;
 		public short score = 0;
 
 		public void Assign(CTData td)
 		{
 			finished = td.finished;
-			fen = td.fen;
+			moves = td.moves;
 			depth = td.depth;
 			score = td.score;
 		}
@@ -23,13 +23,15 @@ namespace NSProgram
 
 	internal class CTeacher
 	{
-		short valMax = short.MaxValue - 0xff;
-		short valMin = short.MinValue + 0xff;
+		readonly short valMax = short.MaxValue - 0xff;
+		readonly short valMin = short.MinValue + 0xff;
 		public bool ready = false;
-		object locker = new object();
-		CTData tData = new CTData();
+		int minDepth = 0xf;
+		public int time = 0;
+		readonly object locker = new object();
+		readonly CTData tData = new CTData();
 		Process teacherProcess = null;
-		CUci uci = new CUci();
+		readonly CUci uci = new CUci();
 
 		public CTData GetTData()
 		{
@@ -85,7 +87,7 @@ namespace NSProgram
 							if (v <= valMax)
 								v = valMax + 1;
 						}
-						if(v < 0)
+						if (v < 0)
 						{
 							v = short.MinValue - v;
 							if (v >= valMin)
@@ -102,7 +104,7 @@ namespace NSProgram
 		void TeacherWriteLine(string c)
 		{
 			if (teacherProcess != null)
-					teacherProcess.StandardInput.WriteLine(c);
+				teacherProcess.StandardInput.WriteLine(c);
 		}
 
 		public void TeacherTerminate()
@@ -115,18 +117,25 @@ namespace NSProgram
 			}
 		}
 
-		public void Start(string fen, int depth)
+		public void Start(string moves, int depth)
 		{
-			if (String.IsNullOrEmpty(fen) || (depth > 0xff))
+			time = 0;
+			if (String.IsNullOrEmpty(moves) || (depth > 0xff))
 				return;
-			if (depth < 0xf)
-				depth = 0xf;
-			CTData td = new CTData();
-			td.finished = false;
-			td.fen = fen;
-			td.depth = (byte)depth;
+			if ((time < 4) && (minDepth < 0xff))
+				minDepth++;
+			if ((time > 4) && (minDepth > 0xf))
+				minDepth--;
+			if (depth < minDepth)
+				depth = minDepth;
+			CTData td = new CTData
+			{
+				finished = false,
+				moves = moves,
+				depth = (byte)depth
+			};
 			SetTData(td);
-			TeacherWriteLine($"position fen {fen}");
+			TeacherWriteLine($"position startpos moves {moves}");
 			TeacherWriteLine($"go depth {depth}");
 		}
 

@@ -26,23 +26,25 @@ namespace NSProgram
 	{
 		readonly static Random rnd = new Random();
 
-		public byte GetDepth()
+		public bool GetDepth(int mindDepth,out int depth)
 		{
-			int r = 0xffff;
+			depth = 0xffff;
 			foreach (CEmo e in this)
-				if ((r > e.rec.depth) && (e.rec.depth > 0))
-					r = e.rec.depth;
-			if (r == 0xffff)
-				return 0;
-			return (byte)r;
+				if ((e.rec.depth >= mindDepth) && (depth > e.rec.depth))
+					depth = e.rec.depth;
+			return depth < 0xffff;
 		}
 
-		public short GetScore()
+		public bool GetScore(int minDepth,out int score)
 		{
-			foreach (CEmo e in this)
-				if (e.rec.depth > 0)
-					return e.rec.score;
-			return 0;
+			score = 0;
+			if (Count == 0)
+				return false;
+			CRec rec = this[0].rec;
+			if (rec.depth < minDepth)
+				return false;
+			score = rec.score;
+			return true;
 		}
 
 		public CEmo GetEmo(int emo)
@@ -80,9 +82,7 @@ namespace NSProgram
 			while (n > 1)
 			{
 				int k = rnd.Next(n--);
-				CEmo value = this[k];
-				this[k] = this[n];
-				this[n] = value;
+				(this[n], this[k]) = (this[k], this[n]);
 			}
 		}
 

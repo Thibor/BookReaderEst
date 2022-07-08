@@ -44,7 +44,7 @@ namespace NSProgram
 
 		int AgeDel()
 		{
-			return (AgeAvg() >> 3) + 1;
+			return (AgeAvg() >> 2) + 1;
 		}
 
 		int AgeMax()
@@ -385,36 +385,36 @@ namespace NSProgram
 					CRec rec = recList.GetRec(tnt);
 					if (rec != null)
 						lr.Add(rec);
-					else return 0;
+					else break;
 				}
-				else return 0;
+				else break;
 			for (int n = lr.Count - 2; n >= 0; n--)
-				result += UpdateRec(lr[n]);
+				result += UpdateRec(lr[n],true);
 			return result;
 		}
 
-		public int UpdateRec(CRec rec)
+		public int UpdateRec(CRec rec, bool ub = false)
 		{
 			if (rec == null)
 				return 0;
 			chess.SetTnt(rec.tnt);
 			CEmoList emoList = GetEmoList();
-			if (emoList.Count > 0)
-			{
-				byte depth = emoList.GetDepth();
-				if (depth > 0)
+			int minDepth = ub ? 0 : rec.depth;
+			if (emoList.GetDepth(minDepth, out int depth))
+				if (emoList.GetScore(minDepth, out int score))
 				{
-					int score = -emoList.GetScore();
-					if (depth < 0xff)
-						depth++;
-					if ((rec.score != score) || (rec.depth != depth))
+					score = -score;
+					if (++depth > 0xff)
+						depth = 0xff;
+					if (!ub)
+						depth = rec.depth;
+					if ((rec.depth != depth) || (rec.score != score))
 					{
+						rec.depth = (byte)depth;
 						rec.score = (short)score;
-						rec.depth = depth;
 						return 1;
 					}
 				}
-			}
 			return 0;
 		}
 
@@ -539,7 +539,7 @@ namespace NSProgram
 			{
 				foreach (CRec rec in recList)
 				{
-					string l = $"{rec.tnt}{rec.score:+#;-#;+0}";
+					string l = $"{rec.tnt} {rec.depth} {rec.score:+#;-#;+0}";
 					sw.WriteLine(l);
 					Console.Write($"\rRecord {++line}");
 				}
@@ -553,7 +553,7 @@ namespace NSProgram
 			string pt = p + ".tmp";
 			RefreshAge();
 			int maxAge = GetMaxAge();
-			int empty = 0;
+			double totalDepth = 0;
 			Program.deleted = 0;
 			if (maxRecords > 0)
 				Program.deleted = recList.Count - maxRecords;
@@ -572,8 +572,7 @@ namespace NSProgram
 						writer.Write(GetHeader());
 						foreach (CRec rec in recList)
 						{
-							if (rec.depth == 0)
-								empty++;
+							totalDepth += rec.depth;
 							if (rec.tnt == lastTnt)
 							{
 								Program.deleted++;
@@ -614,10 +613,11 @@ namespace NSProgram
 			{
 				return false;
 			}
+			double depth = totalDepth / recList.Count;
 			if (Program.deleted > 0)
 				Console.WriteLine($"log book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
 			if (Program.isLog && (maxAge > 0))
-				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} empty {empty} max {maxAge}");
+				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} depth {depth:N2} max {maxAge}");
 			return true;
 		}
 
@@ -831,18 +831,18 @@ namespace NSProgram
 			Program.deleted = 0;
 			int up = recList.Count;
 			int max;
-			int zero;
+			CRecList rl = new CRecList();
+			foreach (CRec rec in recList)
+				rl.Add(rec);
+			rl.SortDepth();
 			do
 			{
 				int line = 0;
 				max = up;
 				up = 0;
-				zero = 0;
-				foreach (CRec rec in recList)
+				foreach (CRec rec in rl)
 				{
 					up += UpdateRec(rec);
-					if (rec.depth == 0)
-						zero++;
 					Console.Write($"\rupdate {(++line * 100.0 / recList.Count):N4}%");
 				}
 				Program.updated += up;
@@ -850,7 +850,7 @@ namespace NSProgram
 				Console.WriteLine($"Updated {up:N0}");
 				SaveToFile();
 			} while ((max > up) && (up > 0));
-			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} zero {zero}");
+			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
 		}
 
 	}
