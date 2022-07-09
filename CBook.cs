@@ -362,20 +362,18 @@ namespace NSProgram
 			return false;
 		}
 
-		public int UpdateBack(string moves)
+		public void UpdateBack(string moves)
 		{
-			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+			UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 		}
 
-		public int UpdateBack(List<string> moves)
+		public void UpdateBack(List<string> moves)
 		{
-			return UpdateBack(moves.ToArray());
+			UpdateBack(moves.ToArray());
 		}
 
-		public int UpdateBack(string[] moves)
+		public void UpdateBack(string[] moves)
 		{
-
-			int result = 0;
 			List<CRec> lr = new List<CRec>();
 			chess.SetFen();
 			foreach (string uci in moves)
@@ -389,24 +387,23 @@ namespace NSProgram
 				}
 				else break;
 			for (int n = lr.Count - 2; n >= 0; n--)
-				result += UpdateRec(lr[n],true);
-			return result;
+				Program.updated+= UpdateRec(lr[n],true);
 		}
 
-		public int UpdateRec(CRec rec, bool ub = false)
+		public int UpdateRec(CRec rec, bool upDepth = false)
 		{
 			if (rec == null)
 				return 0;
 			chess.SetTnt(rec.tnt);
 			CEmoList emoList = GetEmoList();
-			int minDepth = ub ? 0 : rec.depth;
+			int minDepth = upDepth ? 0 : rec.depth;
 			if (emoList.GetDepth(minDepth, out int depth))
 				if (emoList.GetScore(minDepth, out int score))
 				{
 					score = -score;
 					if (++depth > 0xff)
 						depth = 0xff;
-					if (!ub)
+					if (!upDepth)
 						depth = rec.depth;
 					if ((rec.depth != depth) || (rec.score != score))
 					{
@@ -418,18 +415,19 @@ namespace NSProgram
 			return 0;
 		}
 
-		public int AddUci(string moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
 			return AddUci(moves.Trim().Split(' '), age, limitLen, limitAdd);
 		}
 
-		public int AddUci(List<string> moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(List<string> moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
 			return AddUci(moves.ToArray(), age, limitLen, limitAdd);
 		}
 
-		public int AddUci(string[] moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string[] moves, bool age = false, int limitLen = 0, int limitAdd = 0)
 		{
+			CRec rec = null;
 			int ca = 0;
 			if ((limitLen == 0) || (limitLen > moves.Length))
 				limitLen = moves.Length;
@@ -439,19 +437,19 @@ namespace NSProgram
 				string m = moves[n];
 				if (chess.MakeMove(m, out _))
 				{
-					CRec rec = new CRec
+					rec = new CRec
 					{
 						tnt = chess.GetTnt()
 					};
 					if (recList.AddRec(rec, age))
-						ca++;
-					if ((limitAdd > 0) && (ca >= limitAdd))
+						Program.added++;
+					if ((limitAdd > 0) && (++ca >= limitAdd))
 						break;
 				}
 				else
 					break;
 			}
-			return ca;
+			return rec;
 		}
 
 		void RefreshAge()
@@ -521,7 +519,7 @@ namespace NSProgram
 
 		public bool SaveToUci(string p)
 		{
-			List<string> sl = GetGames(Program.bookLimitW);
+			List<string> sl = GetGames();
 			FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None);
 			using (StreamWriter sw = new StreamWriter(fs))
 			{
@@ -807,10 +805,10 @@ namespace NSProgram
 			}
 		}
 
-		List<string> GetGames(int limit = 0)
+		List<string> GetGames()
 		{
 			List<string> sl = new List<string>();
-			if (branchList.Start(limit))
+			if (branchList.Start())
 				do
 				{
 					string uci = branchList.GetUci();

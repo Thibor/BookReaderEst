@@ -17,7 +17,7 @@ namespace NSProgram
 	{
 		readonly static Random rnd = new Random();
 
-		public bool AddRec(CRec rec, bool age = false)
+		public bool AddRec(CRec rec, bool upAge = false)
 		{
 			int index = FindTnt(rec.tnt);
 			if (index == Count)
@@ -27,7 +27,7 @@ namespace NSProgram
 				CRec r = this[index];
 				if (r.tnt == rec.tnt)
 				{
-					if (age)
+					if (upAge)
 						r.age = rec.age;
 					return false;
 				}

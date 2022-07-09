@@ -8,16 +8,20 @@ namespace NSProgram
 	class CTData
 	{
 		public bool finished = true;
+		public bool stop = false;
 		public string moves = String.Empty;
 		public byte depth = 0;
 		public short score = 0;
+		public string best = String.Empty;
 
 		public void Assign(CTData td)
 		{
 			finished = td.finished;
+			stop = td.stop;
 			moves = td.moves;
 			depth = td.depth;
 			score = td.score;
+			best = td.best;
 		}
 	}
 
@@ -25,9 +29,11 @@ namespace NSProgram
 	{
 		readonly short valMax = short.MaxValue - 0xff;
 		readonly short valMin = short.MinValue + 0xff;
-		public bool ready = false;
+		public bool enabled = false;
+		public bool stoped = false;
 		int minDepth = 0xf;
 		public int time = 0;
+		public int games = 0;
 		readonly object locker = new object();
 		readonly CTData tData = new CTData();
 		Process teacherProcess = null;
@@ -60,7 +66,9 @@ namespace NSProgram
 					uci.SetMsg(e.Data);
 					if (uci.command == "bestmove")
 					{
+						games++;
 						CTData td = GetTData();
+						uci.GetValue("bestmove", out td.best);
 						td.finished = true;
 						SetTData(td);
 						return;
@@ -120,7 +128,7 @@ namespace NSProgram
 		public void Start(string moves, int depth)
 		{
 			time = 0;
-			if (String.IsNullOrEmpty(moves) || (depth > 0xff))
+			if (stoped || String.IsNullOrEmpty(moves) || (depth > 0xff))
 				return;
 			if ((time < 4) && (minDepth < 0xff))
 				minDepth++;
@@ -139,9 +147,15 @@ namespace NSProgram
 			TeacherWriteLine($"go depth {depth}");
 		}
 
+		public void Stop()
+		{
+			stoped = true;
+			TeacherWriteLine("stop");
+		}
+
 		public bool SetTeacher(string teacherFile)
 		{
-			ready = false;
+			enabled = false;
 			if (File.Exists(teacherFile))
 			{
 				teacherProcess = new Process();
@@ -159,9 +173,11 @@ namespace NSProgram
 				TeacherWriteLine("uci");
 				TeacherWriteLine("isready");
 				TeacherWriteLine("ucinewgame");
-				ready = true;
+				enabled = true;
+				stoped = false;
+				games = 0;
 			}
-			return ready;
+			return enabled;
 		}
 
 	}

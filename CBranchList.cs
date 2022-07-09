@@ -47,11 +47,9 @@ namespace NSProgram
 	internal class CBranchList : List<CBranch>
 	{
 		public int used = 0;
-		int limit = 0;
 
-		public bool Start(int l = 0)
+		public bool Start()
 		{
-			limit = l;
 			used = 0;
 			Program.book.chess.SetFen();
 			Clear();
@@ -67,7 +65,7 @@ namespace NSProgram
 				used += branch.emoList.Count;
 				Add(branch);
 				Program.book.chess.MakeMove(branch.GetEmo().emo);
-				if((limit == 0) || (Count < limit))
+				if((Program.bookLimitW == 0) || (Program.bookLimitW < Count))
 					BlFill();
 			}
 		}
