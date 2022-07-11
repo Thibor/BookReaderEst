@@ -362,18 +362,19 @@ namespace NSProgram
 			return false;
 		}
 
-		public void UpdateBack(string moves)
+		public bool UpdateBack(string moves)
 		{
-			UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 		}
 
-		public void UpdateBack(List<string> moves)
+		public bool UpdateBack(List<string> moves)
 		{
-			UpdateBack(moves.ToArray());
+			return UpdateBack(moves.ToArray());
 		}
 
-		public void UpdateBack(string[] moves)
+		public bool UpdateBack(string[] moves)
 		{
+			int up = Program.updated;
 			List<CRec> lr = new List<CRec>();
 			chess.SetFen();
 			foreach (string uci in moves)
@@ -388,6 +389,7 @@ namespace NSProgram
 				else break;
 			for (int n = lr.Count - 2; n >= 0; n--)
 				Program.updated+= UpdateRec(lr[n],true);
+			return up != Program.updated;
 		}
 
 		public int UpdateRec(CRec rec, bool upDepth = false)
@@ -415,17 +417,17 @@ namespace NSProgram
 			return 0;
 		}
 
-		public CRec AddUci(string moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.Trim().Split(' '), age, limitLen, limitAdd);
+			return AddUci(moves.Trim().Split(' '), upAge, limitLen, limitAdd);
 		}
 
-		public CRec AddUci(List<string> moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(List<string> moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.ToArray(), age, limitLen, limitAdd);
+			return AddUci(moves.ToArray(), upAge, limitLen, limitAdd);
 		}
 
-		public CRec AddUci(string[] moves, bool age = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string[] moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
 		{
 			CRec rec = null;
 			int ca = 0;
@@ -441,10 +443,12 @@ namespace NSProgram
 					{
 						tnt = chess.GetTnt()
 					};
-					if (recList.AddRec(rec, age))
+					if (recList.AddRec(rec, upAge))
+					{
 						Program.added++;
-					if ((limitAdd > 0) && (++ca >= limitAdd))
-						break;
+						if ((limitAdd > 0) && (++ca >= limitAdd))
+							break;
+					}
 				}
 				else
 					break;

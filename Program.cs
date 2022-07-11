@@ -19,7 +19,7 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookAdd = 1;
+		public static int bookAdd = 3;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
@@ -166,7 +166,7 @@ namespace NSProgram
 			if (isInfo)
 				book.InfoMoves("");
 
-	
+
 			do
 			{
 				string msg = Console.ReadLine().Trim();
@@ -262,19 +262,22 @@ namespace NSProgram
 								updated = 0;
 								deleted = 0;
 							}
-							if (bookLoaded && bookWrite && book.chess.Is2ToEnd(out string myMove, out string enMove))
-							{
-								string[] am = lastMoves.Split(' ');
-								List<string> movesUci = new List<string>();
-								foreach (string m in am)
-									movesUci.Add(m);
-								movesUci.Add(myMove);
-								movesUci.Add(enMove);
-								bookChanged = true;
-								book.AddUci(movesUci, true, 0, bookAdd);
-								book.UpdateBack(movesUci);
-								teacher.Stop();
-							}
+							if (bookLoaded && teacher.enabled)
+								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
+								{
+									string movesUci = $"{lastMoves} {myMove} {enMove}";
+									if (bookWrite)
+										book.AddUci(movesUci, true, 0, bookAdd);
+									book.UpdateBack(movesUci);
+									bookChanged = true;
+									teacher.Stop();
+								}
+								else if (book.chess.Is1ToEnd())
+								{
+									if (book.UpdateBack(lastMoves))
+										bookChanged = true;
+									teacher.Stop();
+								}
 						}
 						break;
 					case "go":
@@ -331,7 +334,6 @@ namespace NSProgram
 								rec.score = td.score;
 								rec.depth = td.depth;
 								book.UpdateBack(td.moves);
-								book.log.Add($"{td.moves} D {td.depth}");
 							}
 						}
 						td.finished = false;
