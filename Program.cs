@@ -331,7 +331,7 @@ namespace NSProgram
 								book.chess.MakeMoves(td.moves);
 								string tnt = book.chess.GetTnt();
 								CRec rec = book.recList.GetRec(tnt);
-								rec.score = td.score;
+								rec.score = (short)-td.score;
 								rec.depth = td.depth;
 								book.UpdateBack(td.moves);
 							}

@@ -44,7 +44,7 @@ namespace NSProgram
 
 		int AgeDel()
 		{
-			return (AgeAvg() >> 2) + 1;
+			return (AgeAvg() >> 1) + 1;
 		}
 
 		int AgeMax()
@@ -388,7 +388,7 @@ namespace NSProgram
 				}
 				else break;
 			for (int n = lr.Count - 2; n >= 0; n--)
-				Program.updated+= UpdateRec(lr[n],true);
+				Program.updated += UpdateRec(lr[n], true);
 			return up != Program.updated;
 		}
 
@@ -616,9 +616,7 @@ namespace NSProgram
 				return false;
 			}
 			double depth = totalDepth / recList.Count;
-			if (Program.deleted > 0)
-				Console.WriteLine($"log book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
-			if (Program.isLog && (maxAge > 0))
+			if (Program.isLog && (Program.deleted > 0))
 				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} depth {depth:N2} max {maxAge}");
 			return true;
 		}
@@ -746,8 +744,11 @@ namespace NSProgram
 				return String.Empty;
 			}
 			string umo = chess.EmoToUmo(bst.emo);
-			Console.WriteLine($"info score cp {bst.rec.score} depth {bst.rec.depth}");
-			Console.WriteLine($"info string book {umo} {bst.rec.score:+#;-#;0} depth {bst.rec.depth} possible {emoList.Count} age {bst.rec.age}");
+			if (bst.rec != null)
+			{
+				Console.WriteLine($"info score cp {bst.rec.score} depth {bst.rec.depth}");
+				Console.WriteLine($"info string book {umo} {bst.rec.score:+#;-#;0} depth {bst.rec.depth} possible {emoList.Count} age {bst.rec.age}");
+			}
 			return umo;
 		}
 

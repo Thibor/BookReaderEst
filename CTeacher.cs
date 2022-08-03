@@ -28,7 +28,7 @@ namespace NSProgram
 	internal class CTeacher
 	{
 		readonly short valMax = short.MaxValue - 0xff;
-		readonly short valMin = short.MinValue + 0xff;
+		readonly short valMin = -short.MaxValue + 0xff;
 		public bool enabled = false;
 		public bool stoped = false;
 		int minDepth = 0xf;
@@ -66,7 +66,6 @@ namespace NSProgram
 					uci.SetMsg(e.Data);
 					if (uci.command == "bestmove")
 					{
-						games++;
 						CTData td = GetTData();
 						uci.GetValue("bestmove", out td.best);
 						td.finished = true;
@@ -76,7 +75,7 @@ namespace NSProgram
 					if (uci.GetValue("cp", out string value))
 					{
 						CTData td = GetTData();
-						int v = -Convert.ToInt32(value);
+						int v = Convert.ToInt32(value);
 						if (v > valMax)
 							v = valMax;
 						if (v < valMin)
@@ -88,7 +87,7 @@ namespace NSProgram
 					if (uci.GetValue("mate", out string mate))
 					{
 						CTData td = GetTData();
-						int v = -Convert.ToInt32(mate);
+						int v = Convert.ToInt32(mate);
 						if (v > 0)
 						{
 							v = short.MaxValue - v;
@@ -97,10 +96,11 @@ namespace NSProgram
 						}
 						if (v < 0)
 						{
-							v = short.MinValue - v;
+							v = -short.MaxValue - v;
 							if (v >= valMin)
 								v = valMin - 1;
 						}
+						td.score = (short)v;
 						SetTData(td);
 						return;
 					};
@@ -128,6 +128,7 @@ namespace NSProgram
 		public void Start(string moves, int depth)
 		{
 			time = 0;
+			games++;
 			if (stoped || String.IsNullOrEmpty(moves) || (depth > 0xff))
 				return;
 			if ((time < 4) && (minDepth < 0xff))
