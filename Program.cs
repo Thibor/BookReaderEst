@@ -19,7 +19,7 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookAdd = 3;
+		public static int bookAdd = 5;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
@@ -81,7 +81,7 @@ namespace NSProgram
 						ax = ac;
 						isW = true;
 						break;
-					case "-info"://writable
+					case "-info":
 						ax = ac;
 						isInfo = true;
 						break;
@@ -135,8 +135,6 @@ namespace NSProgram
 				if (isW)
 					Console.WriteLine($"info string write on");
 			}
-
-
 			Process engineProcess = null;
 			if (File.Exists(engineFile))
 			{
@@ -164,9 +162,7 @@ namespace NSProgram
 				bookLimitW = 0;
 			}
 			if (isInfo)
-				book.InfoMoves("");
-
-
+				book.InfoMoves();
 			do
 			{
 				string msg = Console.ReadLine().Trim();
@@ -346,7 +342,18 @@ namespace NSProgram
 							book.chess.MakeMoves(td.moves);
 							string tnt = book.chess.GetTnt();
 							CRec bst = book.recList.GetRec(tnt);
-							teacher.Start(td.moves, bst.depth + 1);
+							List<int> moves = book.chess.GenerateValidMoves(out bool mate);
+							if (moves.Count == 0)
+							{
+								if (mate)
+									bst.score = short.MaxValue - 1;
+								else
+									bst.score = 0;
+								bst.depth++;
+								book.UpdateBack(td.moves);
+							}
+							else
+								teacher.Start(td.moves, bst.depth + 1);
 						}
 						bookChanged = true;
 					}

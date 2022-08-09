@@ -786,7 +786,7 @@ namespace NSProgram
 			ShowLevel(255);
 		}
 
-		public void InfoMoves(string moves)
+		public void InfoMoves(string moves = "")
 		{
 			chess.SetFen();
 			if (!chess.MakeMoves(moves))
