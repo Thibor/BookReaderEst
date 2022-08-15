@@ -417,24 +417,24 @@ namespace NSProgram
 			return 0;
 		}
 
-		public CRec AddUci(string moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.Trim().Split(' '), upAge, limitLen, limitAdd);
+			return AddUci(moves.Trim().Split(' '), upAge, limitPly, limitAdd);
 		}
 
-		public CRec AddUci(List<string> moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(List<string> moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
-			return AddUci(moves.ToArray(), upAge, limitLen, limitAdd);
+			return AddUci(moves.ToArray(), upAge, limitPly, limitAdd);
 		}
 
-		public CRec AddUci(string[] moves, bool upAge = false, int limitLen = 0, int limitAdd = 0)
+		public CRec AddUci(string[] moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
 			CRec rec = null;
 			int ca = 0;
-			if ((limitLen == 0) || (limitLen > moves.Length))
-				limitLen = moves.Length;
+			if ((limitPly == 0) || (limitPly > moves.Length))
+				limitPly = moves.Length;
 			chess.SetFen();
-			for (int n = 0; n < limitLen; n++)
+			for (int n = 0; n < limitPly; n++)
 			{
 				string m = moves[n];
 				if (chess.MakeMove(m, out _))
