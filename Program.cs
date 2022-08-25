@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using NSUci;
-using RapLog;
 
 namespace NSProgram
 {
@@ -28,7 +27,7 @@ namespace NSProgram
 		/// Limit ply to read.
 		/// </summary>
 		public static int bookLimitR = 0xf;
-
+		public static bool isIv = false;
 		public static CBook book = new CBook();
 
 		static void Main(string[] args)
@@ -318,7 +317,6 @@ namespace NSProgram
 									CRec last = book.AddUci(uci);
 									last.age = 0xff;
 									book.UpdateBack(uci);
-									book.log.Add($"overtime {td.moves} D {td.depth}");
 								}
 							}
 							else
