@@ -84,6 +84,10 @@ namespace NSProgram
 						ax = ac;
 						isInfo = true;
 						break;
+					case "-iv":
+						ax = ac;
+						isIv = true;
+						break;
 					default:
 						switch (ax)
 						{
@@ -257,7 +261,7 @@ namespace NSProgram
 								updated = 0;
 								deleted = 0;
 							}
-							if (bookLoaded && teacher.enabled)
+							if (bookLoaded && isW)
 								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
 								{
 									string movesUci = $"{lastMoves} {myMove} {enMove}";
@@ -355,11 +359,11 @@ namespace NSProgram
 						}
 						bookChanged = true;
 					}
-					if (bookChanged)
-					{
-						bookChanged = false;
-						book.SaveToFile();
-					}
+				}
+				if (bookLoaded && bookChanged)
+				{
+					bookChanged = false;
+					book.SaveToFile();
 				}
 			} while (Uci.command != "quit");
 			teacher.TeacherTerminate();
