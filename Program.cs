@@ -267,7 +267,7 @@ namespace NSProgram
 									string movesUci = $"{lastMoves} {myMove} {enMove}";
 									if (bookWrite)
 										book.AddUci(movesUci, true, 0, bookAdd);
-									book.UpdateBack(movesUci);
+									book.UpdateBack(movesUci,true);
 									bookChanged = true;
 									teacher.Stop();
 								}

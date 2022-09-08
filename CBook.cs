@@ -485,17 +485,17 @@ namespace NSProgram
 			return false;
 		}
 
-		public bool UpdateBack(string moves)
+		public bool UpdateBack(string moves, bool mate = false)
 		{
-			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries),mate);
 		}
 
-		public bool UpdateBack(List<string> moves)
+		public bool UpdateBack(List<string> moves, bool mate = false)
 		{
-			return UpdateBack(moves.ToArray());
+			return UpdateBack(moves.ToArray(),mate);
 		}
 
-		public bool UpdateBack(string[] moves)
+		public bool UpdateBack(string[] moves,bool mate = false)
 		{
 			int up = Program.updated;
 			List<CRec> lr = new List<CRec>();
@@ -510,6 +510,23 @@ namespace NSProgram
 					else break;
 				}
 				else break;
+			int i = 0;
+			int m = 1;
+			short max = short.MaxValue;
+			if(mate && (lr.Count == moves.Length))
+				for (int n = lr.Count - 1; n >= 0; n--)
+				{
+					CRec rec = lr[n];
+					if((++i & 1) > 0)
+					{
+						rec.score = (short)(max - m);
+					}
+					else
+					{
+						rec.score = (short)(-max + m);
+						++m;
+					}
+			}
 			for (int n = lr.Count - 2; n >= 0; n--)
 				Program.updated += UpdateRec(lr[n], true);
 			return up != Program.updated;
