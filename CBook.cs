@@ -547,6 +547,10 @@ namespace NSProgram
 						depth = 0xff;
 					if (!upDepth)
 						depth = rec.depth;
+					if (score > 0)
+						score--;
+					if (score < 0)
+						score++;
 					if ((rec.depth != depth) || (rec.score != score))
 					{
 						rec.depth = (byte)depth;
