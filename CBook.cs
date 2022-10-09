@@ -295,7 +295,7 @@ namespace NSProgram
 								ulong w = ReadUInt64(reader);
 								CRec rec = new CRec
 								{
-									tnt = MbwToTnt(m,b,w),
+									tnt = MbwToTnt(m, b, w),
 									score = ReadInt16(reader),
 									age = reader.ReadByte(),
 									depth = reader.ReadByte()
@@ -312,117 +312,6 @@ namespace NSProgram
 			}
 			return true;
 		}
-
-		/*bool AddFileTnt(string p)
-		{
-			string pt = p + ".tmp";
-			try
-			{
-				if (!File.Exists(p) && File.Exists(pt))
-					File.Move(pt, p);
-			}
-			catch
-			{
-				return false;
-			}
-			try
-			{
-				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					using (BinaryReader reader = new BinaryReader(fs))
-					{
-						string headerBst = GetHeader();
-						string headerCur = reader.ReadString();
-						if (!Program.isIv && (headerCur != headerBst))
-							Console.WriteLine($"This program only supports version  [{headerBst}]");
-						else
-						{
-							while (reader.BaseStream.Position != reader.BaseStream.Length)
-							{
-								ulong[] hash = new ulong[4];
-								for (int n = 0; n < hash.Length; n++)
-									hash[n] = ReadUInt64(reader);
-								CRec rec = new CRec
-								{
-									tnt = HashToTnt(hash),
-									score = ReadInt16(reader),
-									age = reader.ReadByte(),
-									depth = reader.ReadByte()
-								};
-								recList.Add(rec);
-							}
-						}
-					}
-				}
-			}
-			catch
-			{
-				return false;
-			}
-			return true;
-		}
-
-		string HashToTnt(ulong[] hash)
-		{
-			string tnt = String.Empty;
-			foreach (ulong h in hash)
-				for (int n = 15; n >= 0; n--)
-				{
-					ulong p = (h >> (n << 2)) & 0xf;
-					switch (p)
-					{
-						case 0:
-							tnt += "-";
-							break;
-						case 1:
-							tnt += "a";
-							break;
-						case 2:
-							tnt += "P";
-							break;
-						case 3:
-							tnt += "p";
-							break;
-						case 4:
-							tnt += "N";
-							break;
-						case 5:
-							tnt += "n";
-							break;
-						case 6:
-							tnt += "B";
-							break;
-						case 7:
-							tnt += "b";
-							break;
-						case 8:
-							tnt += "R";
-							break;
-						case 9:
-							tnt += "r";
-							break;
-						case 10:
-							tnt += "Q";
-							break;
-						case 11:
-							tnt += "q";
-							break;
-						case 12:
-							tnt += "K";
-							break;
-						case 13:
-							tnt += "k";
-							break;
-						case 14:
-							tnt += "T";
-							break;
-						case 15:
-							tnt += "t";
-							break;
-					}
-				}
-			return tnt;
-		}*/
 
 		void AddFileUci(string p)
 		{
@@ -487,15 +376,15 @@ namespace NSProgram
 
 		public bool UpdateBack(string moves, bool mate = false)
 		{
-			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries),mate);
+			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries), mate);
 		}
 
 		public bool UpdateBack(List<string> moves, bool mate = false)
 		{
-			return UpdateBack(moves.ToArray(),mate);
+			return UpdateBack(moves.ToArray(), mate);
 		}
 
-		public bool UpdateBack(string[] moves,bool mate = false)
+		public bool UpdateBack(string[] moves, bool mate = false)
 		{
 			int up = Program.updated;
 			List<CRec> lr = new List<CRec>();
@@ -510,23 +399,23 @@ namespace NSProgram
 					else break;
 				}
 				else break;
-			int i = 0;
-			int m = 1;
-			short max = short.MaxValue;
-			if(mate && (lr.Count == moves.Length))
+
+			if (mate)
+			{
+				int i = moves.Length - lr.Count;
+				int m = i + 2;
 				for (int n = lr.Count - 1; n >= 0; n--)
 				{
 					CRec rec = lr[n];
-					if((++i & 1) > 0)
-					{
-						rec.score = (short)(max - m);
-					}
+					if ((++i & 1) > 0)
+						rec.score = (short)(Constants.CHECKMATE_MAX - m);
 					else
-					{
-						rec.score = (short)(-max + m);
-						++m;
-					}
+						rec.score = (short)(-Constants.CHECKMATE_MAX + m);
+					if (m < Constants.CHECKMATE_MAX)
+						m++;
+				}
 			}
+
 			for (int n = lr.Count - 2; n >= 0; n--)
 				Program.updated += UpdateRec(lr[n], true);
 			return up != Program.updated;
@@ -762,7 +651,7 @@ namespace NSProgram
 			}
 			double depth = totalDepth / recList.Count;
 			if (Program.isLog && (maxAge > 0))
-				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} depth {depth:N2} max {maxAge}");
+				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
 			return true;
 		}
 
@@ -891,8 +780,9 @@ namespace NSProgram
 			string umo = chess.EmoToUmo(bst.emo);
 			if (bst.rec != null)
 			{
-				Console.WriteLine($"info score cp {bst.rec.score} depth {bst.rec.depth}");
-				Console.WriteLine($"info string book {umo} {bst.rec.score:+#;-#;0} depth {bst.rec.depth} possible {emoList.Count} age {bst.rec.age}");
+				string scFm = bst.rec.score > Constants.CHECKMATE_NEAR ? $"mate {(Constants.CHECKMATE_MAX - bst.rec.score) >> 1}" : (bst.rec.score < -Constants.CHECKMATE_NEAR ? $"mate {(-Constants.CHECKMATE_MAX - bst.rec.score) >> 1}" : $"cp {bst.rec.score}");
+				Console.WriteLine($"info score {scFm} depth {bst.rec.depth}");
+				Console.WriteLine($"info string book {umo} {scFm} depth {bst.rec.depth} possible {emoList.Count} age {bst.rec.age}");
 			}
 			return umo;
 		}

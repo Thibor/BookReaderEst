@@ -27,8 +27,6 @@ namespace NSProgram
 
 	internal class CTeacher
 	{
-		readonly short valMax = short.MaxValue - 0xff;
-		readonly short valMin = -short.MaxValue + 0xff;
 		public bool enabled = false;
 		public bool stoped = false;
 		int minDepth = 0xf;
@@ -76,10 +74,10 @@ namespace NSProgram
 					{
 						CTData td = GetTData();
 						int v = Convert.ToInt32(value);
-						if (v > valMax)
-							v = valMax;
-						if (v < valMin)
-							v = valMin;
+						if (v > Constants.CHECKMATE_NEAR)
+							v = Constants.CHECKMATE_NEAR;
+						if (v < -Constants.CHECKMATE_NEAR)
+							v = -Constants.CHECKMATE_NEAR;
 						td.score = (short)v;
 						SetTData(td);
 						return;
@@ -90,15 +88,15 @@ namespace NSProgram
 						int v = Convert.ToInt32(mate);
 						if (v > 0)
 						{
-							v = short.MaxValue - v;
-							if (v <= valMax)
-								v = valMax + 1;
+							v = Constants.CHECKMATE_MAX - (v<<1);
+							if (v <= Constants.CHECKMATE_NEAR)
+								v = Constants.CHECKMATE_NEAR + 1;
 						}
 						if (v < 0)
 						{
-							v = -short.MaxValue - v;
-							if (v >= valMin)
-								v = valMin - 1;
+							v = -Constants.CHECKMATE_MAX - (v<<1);
+							if (v >= -Constants.CHECKMATE_NEAR)
+								v = -Constants.CHECKMATE_NEAR - 1;
 						}
 						td.score = (short)v;
 						SetTData(td);

@@ -132,12 +132,14 @@ namespace NSProgram
 			if (String.IsNullOrEmpty(ext))
 				bookName = $"{bookName}{CBook.defExt}";
 			bool bookLoaded = book.LoadFromFile(bookName);
-			if (bookLoaded && (book.recList.Count > 0))
+			if (bookLoaded)
 			{
 				Console.WriteLine($"info string book on");
 				if (isW)
 					Console.WriteLine($"info string write on");
 			}
+			else
+				isW = false;
 			Process engineProcess = null;
 			if (File.Exists(engineFile))
 			{
@@ -267,7 +269,7 @@ namespace NSProgram
 									string movesUci = $"{lastMoves} {myMove} {enMove}";
 									if (bookWrite)
 										book.AddUci(movesUci, true, 0, bookAdd);
-									book.UpdateBack(movesUci,true);
+									book.UpdateBack(movesUci, true);
 									bookChanged = true;
 									teacher.Stop();
 								}
@@ -305,65 +307,72 @@ namespace NSProgram
 						}
 						break;
 				}
-				if (bookLoaded && teacher.enabled)
+				if (bookLoaded && isW)
 				{
-					teacher.time++;
-					CTData td = teacher.GetTData();
-					if (td.finished)
+					if (teacher.enabled)
 					{
-						if (!String.IsNullOrEmpty(td.moves))
+						teacher.time++;
+						CTData td = teacher.GetTData();
+						if (td.finished)
 						{
-							if (teacher.stoped)
+							if (!String.IsNullOrEmpty(td.moves))
 							{
-								if (teacher.games == 1)
+								if (teacher.stoped)
 								{
-									string uci = $"{td.moves} {td.best}";
-									CRec last = book.AddUci(uci);
-									last.age = 0xff;
-									book.UpdateBack(uci);
+									if (teacher.games == 1)
+									{
+										string uci = $"{td.moves} {td.best}";
+										book.AddUci(uci);
+										book.UpdateBack(uci);
+									}
+								}
+								else
+								{
+									book.chess.SetFen();
+									book.chess.MakeMoves(td.moves);
+									string tnt = book.chess.GetTnt();
+									CRec rec = book.recList.GetRec(tnt);
+									rec.score = (short)-td.score;
+									rec.depth = td.depth;
+									book.UpdateBack(td.moves);
 								}
 							}
-							else
+							td.finished = false;
+							td.moves = book.GetFlat();
+							teacher.SetTData(td);
+							if (td.moves != String.Empty)
 							{
+								book.UpdateBack(td.moves);
 								book.chess.SetFen();
 								book.chess.MakeMoves(td.moves);
 								string tnt = book.chess.GetTnt();
-								CRec rec = book.recList.GetRec(tnt);
-								rec.score = (short)-td.score;
-								rec.depth = td.depth;
-								book.UpdateBack(td.moves);
-							}
-						}
-						td.finished = false;
-						td.moves = book.GetFlat();
-						teacher.SetTData(td);
-						if (td.moves != String.Empty)
-						{
-							book.UpdateBack(td.moves);
-							book.chess.SetFen();
-							book.chess.MakeMoves(td.moves);
-							string tnt = book.chess.GetTnt();
-							CRec bst = book.recList.GetRec(tnt);
-							List<int> moves = book.chess.GenerateValidMoves(out bool mate);
-							if (moves.Count == 0)
-							{
-								if (mate)
-									bst.score = short.MaxValue - 1;
+								CRec bst = book.recList.GetRec(tnt);
+								List<int> moves = book.chess.GenerateValidMoves(out bool mate);
+								if (moves.Count == 0)
+								{
+									if (mate)
+										bst.score = short.MaxValue - 1;
+									else
+										bst.score = 0;
+									bst.depth++;
+									book.UpdateBack(td.moves);
+								}
 								else
-									bst.score = 0;
-								bst.depth++;
-								book.UpdateBack(td.moves);
+									teacher.Start(td.moves, bst.depth + 1);
 							}
-							else
-								teacher.Start(td.moves, bst.depth + 1);
+							bookChanged = true;
 						}
-						bookChanged = true;
 					}
-				}
-				if (bookLoaded && bookChanged)
-				{
-					bookChanged = false;
-					book.SaveToFile();
+					if (!bookChanged)
+					{
+						CRec rec = book.recList.GetRec();
+						bookChanged = book.UpdateRec(rec) > 0;
+					}
+					if (bookChanged)
+					{
+						bookChanged = false;
+						book.SaveToFile();
+					}
 				}
 			} while (Uci.command != "quit");
 			teacher.TeacherTerminate();

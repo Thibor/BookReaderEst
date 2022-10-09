@@ -104,6 +104,14 @@ namespace NSProgram
 			return bst;
 		}
 
+		public CRec GetRec()
+		{
+			int index = rnd.Next(Count);
+			if (index < Count)
+				return this[index];
+			return null;
+		}
+
 		public CRec GetRec(string tnt)
 		{
 			int index = FindTnt(tnt);
