@@ -351,7 +351,7 @@ namespace NSProgram
 								if (moves.Count == 0)
 								{
 									if (mate)
-										bst.score = short.MaxValue - 1;
+										bst.score = (short)(Constants.CHECKMATE_MAX - 1);
 									else
 										bst.score = 0;
 									bst.depth++;

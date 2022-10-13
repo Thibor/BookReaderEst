@@ -96,6 +96,10 @@ namespace NSProgram
 
 		public bool LoadFromFile(string p)
 		{
+			if (String.IsNullOrEmpty(p))
+				p = path;
+			if (String.IsNullOrEmpty(p))
+				return false;
 			path = p;
 			fileDirectory = Path.GetDirectoryName(p);
 			if (fileDirectory != String.Empty)
