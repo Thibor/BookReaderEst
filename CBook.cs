@@ -97,9 +97,10 @@ namespace NSProgram
 		public bool LoadFromFile(string p)
 		{
 			if (String.IsNullOrEmpty(p))
-				p = path;
-			if (String.IsNullOrEmpty(p))
-				return false;
+				if (String.IsNullOrEmpty(path))
+					return false;
+				else
+					p = path;
 			path = p;
 			fileDirectory = Path.GetDirectoryName(p);
 			if (fileDirectory != String.Empty)
@@ -676,7 +677,7 @@ namespace NSProgram
 						string san = chess.UmoToSan(umo);
 						if (san == String.Empty)
 							break;
-						int number = (chess.g_moveNumber >> 1) + 1;
+						int number = (chess.halfMove >> 1) + 1;
 						if (chess.whiteTurn)
 							pgn += $" {number}. {san}";
 						else

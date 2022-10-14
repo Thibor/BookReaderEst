@@ -253,7 +253,7 @@ namespace NSProgram
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
 						{
-							if (book.chess.g_moveNumber < 2)
+							if (book.chess.halfMove < 2)
 							{
 								bookChanged = false;
 								bookWrite = isW;
@@ -273,17 +273,11 @@ namespace NSProgram
 									bookChanged = true;
 									teacher.Stop();
 								}
-								else if (book.chess.Is1ToEnd())
-								{
-									if (book.UpdateBack(lastMoves))
-										bookChanged = true;
-									teacher.Stop();
-								}
 						}
 						break;
 					case "go":
 						string move = String.Empty;
-						if ((bookLimitR == 0) || (bookLimitR > book.chess.g_moveNumber))
+						if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
 							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
 						if (move != String.Empty)
 						{

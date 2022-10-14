@@ -41,11 +41,11 @@ namespace NSChess
 		const int moveflagPromoteKnight = 0x80 << 16;
 		const int maskCastle = moveflagCastleKing | moveflagCastleQueen;
 		const int maskColor = colorBlack | colorWhite;
-		public int g_castleRights = 0xf;
+		public int castleRights = 0xf;
 		ulong g_hash = 0;
-		public int g_passing = 0;
-		public int g_move50 = 0;
-		public int g_moveNumber = 0;
+		public int passing = 0;
+		public int move50 = 0;
+		public int halfMove = 0;
 		public bool g_inCheck = false;
 		public int g_lastCastle = 0;
 		bool adjInsufficient = false;
@@ -330,24 +330,24 @@ namespace NSChess
 				whiteTurn = false;
 			else
 				return false;
-			g_castleRights = 0;
+			castleRights = 0;
 			if (chunks[2].IndexOf('K') != -1)
-				g_castleRights |= 1;
+				castleRights |= 1;
 			if (chunks[2].IndexOf('Q') != -1)
-				g_castleRights |= 2;
+				castleRights |= 2;
 			if (chunks[2].IndexOf('k') != -1)
-				g_castleRights |= 4;
+				castleRights |= 4;
 			if (chunks[2].IndexOf('q') != -1)
-				g_castleRights |= 8;
-			g_passing = UmoToSquare(chunks[3]);
-			g_move50 = chunks.Length < 5 ? 0 : Int32.Parse(chunks[4]);
-			g_moveNumber = chunks.Length < 6 ? 1 : Int32.Parse(chunks[5]);
-			if (g_moveNumber > 0)
-				g_moveNumber--;
-			g_moveNumber <<= 1;
+				castleRights |= 8;
+			passing = UmoToSquare(chunks[3]);
+			move50 = chunks.Length < 5 ? 0 : Int32.Parse(chunks[4]);
+			halfMove = chunks.Length < 6 ? 1 : Int32.Parse(chunks[5]);
+			if (halfMove > 0)
+				halfMove--;
+			halfMove <<= 1;
 			if (!whiteTurn)
-				g_moveNumber++;
-			undoIndex = g_move50;
+				halfMove++;
+			undoIndex = move50;
 			return true;
 		}
 
@@ -386,35 +386,35 @@ namespace NSChess
 		{
 			string result = GetFenBase();
 			result += whiteTurn ? " w " : " b ";
-			if (g_castleRights == 0)
+			if (castleRights == 0)
 				result += "-";
 			else
 			{
-				if ((g_castleRights & 1) != 0)
+				if ((castleRights & 1) != 0)
 					result += 'K';
-				if ((g_castleRights & 2) != 0)
+				if ((castleRights & 2) != 0)
 					result += 'Q';
-				if ((g_castleRights & 4) != 0)
+				if ((castleRights & 4) != 0)
 					result += 'k';
-				if ((g_castleRights & 8) != 0)
+				if ((castleRights & 8) != 0)
 					result += 'q';
 			}
 			result += ' ';
-			if (g_passing == 0)
+			if (passing == 0)
 				result += '-';
 			else
 			{
 				if (whiteTurn)
 				{
-					if ((g_board[g_passing + 15] == (piecePawn | colorWhite)) || (g_board[g_passing + 17] == (piecePawn | colorWhite)))
-						result += SquareToUmo(g_passing);
+					if ((g_board[passing + 15] == (piecePawn | colorWhite)) || (g_board[passing + 17] == (piecePawn | colorWhite)))
+						result += SquareToUmo(passing);
 					else
 						result += '-';
 				}
 				else
 				{
-					if ((g_board[g_passing - 15] == (piecePawn | colorBlack)) || (g_board[g_passing - 17] == (piecePawn | colorBlack)))
-						result += SquareToUmo(g_passing);
+					if ((g_board[passing - 15] == (piecePawn | colorBlack)) || (g_board[passing - 17] == (piecePawn | colorBlack)))
+						result += SquareToUmo(passing);
 					else
 						result += '-';
 				}
@@ -424,7 +424,7 @@ namespace NSChess
 
 		public string GetFen()
 		{
-			return GetEpd() + ' ' + g_move50 + ' ' + ((g_moveNumber >> 1) + 1);
+			return GetEpd() + ' ' + move50 + ' ' + ((halfMove >> 1) + 1);
 		}
 
 		#endregion
@@ -495,14 +495,14 @@ namespace NSChess
 						}
 						if ((g_board[to - 1] & enColor) > 0)
 							GeneratePwnMoves(moves, fr, to - 1, true, 0);
-						else if ((to - 1) == g_passing)
-							GeneratePwnMoves(moves, fr, g_passing, true, moveflagPassing);
+						else if ((to - 1) == passing)
+							GeneratePwnMoves(moves, fr, passing, true, moveflagPassing);
 						else if ((g_board[to - 1] & colorEmpty) > 0)
 							GeneratePwnMoves(moves, fr, to - 1, false, 0);
 						if ((g_board[to + 1] & enColor) > 0)
 							GeneratePwnMoves(moves, fr, to + 1, true, 0);
-						else if ((to + 1) == g_passing)
-							GeneratePwnMoves(moves, fr, g_passing, true, moveflagPassing);
+						else if ((to + 1) == passing)
+							GeneratePwnMoves(moves, fr, passing, true, moveflagPassing);
 						else if ((g_board[to + 1] & colorEmpty) > 0)
 							GeneratePwnMoves(moves, fr, to + 1, false, 0);
 						break;
@@ -524,7 +524,7 @@ namespace NSChess
 						break;
 					case 6:
 						GenerateUniMoves(moves, onlyAattack, fr, arrDirQueen, 1);
-						int cr = wt ? g_castleRights : g_castleRights >> 2;
+						int cr = wt ? castleRights : castleRights >> 2;
 						if ((cr & 1) > 0)
 							if (((g_board[fr + 1] & colorEmpty) > 0) && ((g_board[fr + 2] & colorEmpty) > 0))
 								GenerateMove(moves, fr, fr + 2, true, moveflagCastleKing);
@@ -585,9 +585,9 @@ namespace NSChess
 			int flags = move & 0xFF0000;
 			int capi = to;
 			CUndo undo = undoStack[--undoIndex];
-			g_passing = undo.passing;
-			g_castleRights = undo.castle;
-			g_move50 = undo.move50;
+			passing = undo.passing;
+			castleRights = undo.castle;
+			move50 = undo.move50;
 			g_lastCastle = undo.lastCastle;
 			g_hash = undo.hash;
 			int captured = undo.captured;
@@ -614,16 +614,16 @@ namespace NSChess
 			}
 			g_board[capi] = captured;
 			whiteTurn ^= true;
-			g_moveNumber--;
+			halfMove--;
 		}
 
 		public void MakeMove(int emo)
 		{
 			CUndo undo = undoStack[undoIndex++];
 			undo.hash = g_hash;
-			undo.passing = g_passing;
-			undo.castle = g_castleRights;
-			undo.move50 = g_move50;
+			undo.passing = passing;
+			undo.castle = castleRights;
+			undo.move50 = move50;
 			undo.lastCastle = g_lastCastle;
 			int fr = emo & 0xff;
 			int to = (emo >> 8) & 0xff;
@@ -650,17 +650,17 @@ namespace NSChess
 			}
 			undo.captured = captured;
 			g_hash ^= g_hashBoard[fr, piece];
-			g_passing = 0;
+			passing = 0;
 			if ((captured & 0xF) > 0)
-				g_move50 = 0;
+				move50 = 0;
 			else if ((piece & 7) == piecePawn)
 			{
-				if (to == (fr + 32)) g_passing = (fr + 16);
-				if (to == (fr - 32)) g_passing = (fr - 16);
-				g_move50 = 0;
+				if (to == (fr + 32)) passing = (fr + 16);
+				if (to == (fr - 32)) passing = (fr - 16);
+				move50 = 0;
 			}
 			else
-				g_move50++;
+				move50++;
 			if ((flags & moveflagPromotion) > 0)
 			{
 				int newPiece = piecefr & (~0x7);
@@ -681,9 +681,9 @@ namespace NSChess
 				g_hash ^= g_hashBoard[to, piece];
 			}
 			g_board[fr] = colorEmpty;
-			g_castleRights &= boardCastle[fr] & boardCastle[to];
+			castleRights &= boardCastle[fr] & boardCastle[to];
 			whiteTurn ^= true;
-			g_moveNumber++;
+			halfMove++;
 		}
 
 		public bool MakeMove(string umo, out int emo, out int piece)
@@ -792,7 +792,7 @@ namespace NSChess
 			check = g_inCheck;
 			GenerateAllMoves(whiteTurn, false);
 			bool myInsufficient = adjInsufficient;
-			if (g_move50 >= 100)
+			if (move50 >= 100)
 				return CGameState.move50;
 			if (IsRepetition())
 				return CGameState.repetition;
@@ -811,7 +811,7 @@ namespace NSChess
 
 		public bool IsRepetition(int count = 3)
 		{
-			int min =  undoIndex - g_move50;
+			int min =  undoIndex - move50;
 			if (min < 0)
 				min = 0;
 			for (int n = undoIndex - 4; n >= min; n -= 2)

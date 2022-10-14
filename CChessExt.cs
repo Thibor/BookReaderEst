@@ -5,32 +5,7 @@ namespace NSProgram
 {
 	class CChessExt : CChess
 	{
-		public bool Is1ToEnd()
-		{
-			int count = 0;
-			List<int> am = GenerateAllMoves(whiteTurn, false);
-			if (!g_inCheck)
-				foreach (int m in am)
-				{
-					MakeMove(m);
-					GenerateAllMoves(whiteTurn, true);
-					if (!g_inCheck)
-					{
-						count++;
-						if (GetGameState() != CGameState.normal)
-						{
-							UnmakeMove(m);
-							return true;
-						}
-					}
-					UnmakeMove(m);
-				}
-			if (count == 0)
-				return true;
-			return false;
-		}
-
-			public bool Is2ToEnd(out string myMov, out string enMov)
+		public bool Is2ToEnd(out string myMov, out string enMov)
 		{
 			myMov = "";
 			enMov = "";
@@ -93,18 +68,18 @@ namespace NSProgram
 					}
 				}
 			char[] chars = result.ToCharArray();
-			if ((g_castleRights & 1) != 0)
+			if ((castleRights & 1) != 0)
 				chars[63] = 'T';
-			if ((g_castleRights & 2) != 0)
+			if ((castleRights & 2) != 0)
 				chars[56] = 'T';
-			if ((g_castleRights & 4) != 0)
+			if ((castleRights & 4) != 0)
 				chars[7] = 't';
-			if ((g_castleRights & 8) != 0)
+			if ((castleRights & 8) != 0)
 				chars[0] = 't';
-			if (g_passing != 0)
+			if (passing != 0)
 			{
-				int x = (g_passing & 0xf) - 4;
-				int y = (g_passing >> 4) - 4;
+				int x = (passing & 0xf) - 4;
+				int y = (passing >> 4) - 4;
 				if (whiteTurn)
 					y++;
 				else
@@ -141,10 +116,10 @@ namespace NSProgram
 		public void SetTnt(string tnt)
 		{
 			whiteTurn = true;
-			g_castleRights = 0;
+			castleRights = 0;
 			g_lastCastle = 0;
-			g_passing = 0;
-			g_moveNumber = 0;
+			passing = 0;
+			halfMove = 0;
 			for (int n = 0; n < tnt.Length; n++)
 			{
 				int index = arrField[n];
@@ -154,7 +129,7 @@ namespace NSProgram
 				{
 					case 'a':
 						piece |= piecePawn;
-						g_passing = index - 16;
+						passing = index - 16;
 						break;
 					case 'p':
 						piece |= piecePawn;
@@ -170,16 +145,16 @@ namespace NSProgram
 						switch (n)
 						{
 							case 63:
-								g_castleRights |= 1;
+								castleRights |= 1;
 								break;
 							case 56:
-								g_castleRights |= 2;
+								castleRights |= 2;
 								break;
 							case 7:
-								g_castleRights |= 4;
+								castleRights |= 4;
 								break;
 							case 0:
-								g_castleRights |= 8;
+								castleRights |= 8;
 								break;
 						}
 						break;
