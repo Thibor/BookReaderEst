@@ -26,6 +26,15 @@ namespace NSProgram
 	{
 		readonly static Random rnd = new Random();
 
+		public int GetDepth(int minDepth)
+		{
+			int depth = 0xffff;
+			foreach (CEmo e in this)
+				if (depth > e.rec.depth)
+					depth = e.rec.depth;
+			return depth < 0xffff ? depth:minDepth;
+		}
+
 		public bool GetDepth(int mindDepth,out int depth)
 		{
 			depth = 0xffff;

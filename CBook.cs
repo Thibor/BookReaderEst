@@ -76,7 +76,7 @@ namespace NSProgram
 			return $@"{fileDirectory}{GetBookFile()}";
 		}
 
-		public string GetFlat()
+		public string GetShallow()
 		{
 			string result = String.Empty;
 			chess.SetFen();
@@ -437,10 +437,12 @@ namespace NSProgram
 				if (emoList.GetScore(minDepth, out int score))
 				{
 					score = -score;
-					if (++depth > 0xff)
-						depth = 0xff;
-					if (!upDepth)
-						depth = rec.depth;
+					if (upDepth)
+					{
+						if (++depth > 0xff)
+							depth = 0xff;
+					}
+					else depth = emoList.GetDepth(rec.depth);
 					if (score > 0)
 						score--;
 					if (score < 0)

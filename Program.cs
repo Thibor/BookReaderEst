@@ -311,28 +311,18 @@ namespace NSProgram
 						{
 							if (!String.IsNullOrEmpty(td.moves))
 							{
-								if (teacher.stoped)
-								{
-									if (teacher.games == 1)
-									{
-										string uci = $"{td.moves} {td.best}";
-										book.AddUci(uci);
-										book.UpdateBack(uci);
-									}
-								}
-								else
-								{
-									book.chess.SetFen();
-									book.chess.MakeMoves(td.moves);
-									string tnt = book.chess.GetTnt();
-									CRec rec = book.recList.GetRec(tnt);
-									rec.score = (short)-td.score;
-									rec.depth = td.depth;
-									book.UpdateBack(td.moves);
-								}
+								string uci = $"{td.moves} {td.best}";
+								book.AddUci(uci);
+								book.chess.SetFen();
+								book.chess.MakeMoves(uci);
+								string tnt = book.chess.GetTnt();
+								CRec rec = book.recList.GetRec(tnt);
+								rec.score = (short)td.score;
+								rec.depth = td.depth;
+								book.UpdateBack(uci);
 							}
 							td.finished = false;
-							td.moves = book.GetFlat();
+							td.moves = book.GetShallow();
 							teacher.SetTData(td);
 							if (td.moves != String.Empty)
 							{
