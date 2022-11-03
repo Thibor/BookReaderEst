@@ -1,8 +1,8 @@
-﻿using System;
+﻿using NSUci;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using NSUci;
 
 namespace NSProgram
 {
@@ -52,8 +52,8 @@ namespace NSProgram
 			string lastMoves = String.Empty;
 			CUci Uci = new CUci();
 			CTeacher teacher = new CTeacher();
-			string ax = "-bn";
-			List<string> listBn = new List<string>();
+			string ax = "-bf";
+			List<string> listBf = new List<string>();
 			List<string> listEf = new List<string>();
 			List<string> listEa = new List<string>();
 			List<string> listTf = new List<string>();
@@ -62,14 +62,14 @@ namespace NSProgram
 				string ac = args[n];
 				switch (ac)
 				{
-					case "-add"://moves add to book
-					case "-bn"://book name
+					case "-bf"://book file
 					case "-ef"://engine file
 					case "-ea"://engine arguments
 					case "-rnd"://random moves
 					case "-lr"://limit read in half moves
 					case "-lw"://limit write in half moves
 					case "-tf"://teacher file
+					case "-add"://moves add to book
 						ax = ac;
 						break;
 					case "-log"://add log
@@ -91,8 +91,8 @@ namespace NSProgram
 					default:
 						switch (ax)
 						{
-							case "-bn":
-								listBn.Add(ac);
+							case "-bf":
+								listBf.Add(ac);
 								break;
 							case "-ef":
 								listEf.Add(ac);
@@ -123,15 +123,15 @@ namespace NSProgram
 						break;
 				}
 			}
-			string bookName = String.Join(" ", listBn);
+			string bookFile = String.Join(" ", listBf);
 			string engineFile = String.Join(" ", listEf);
 			string teacherFile = String.Join(" ", listTf);
-			string arguments = String.Join(" ", listEa);
-			string ext = Path.GetExtension(bookName);
+			string engineArguments = String.Join(" ", listEa);
+			string ext = Path.GetExtension(bookFile);
 			Console.WriteLine($"info string book {CBook.name} ver {CBook.version}");
 			if (String.IsNullOrEmpty(ext))
-				bookName = $"{bookName}{CBook.defExt}";
-			bool bookLoaded = book.LoadFromFile(bookName);
+				bookFile = $"{bookFile}{CBook.defExt}";
+			bool bookLoaded = book.LoadFromFile(bookFile);
 			if (bookLoaded)
 			{
 				Console.WriteLine($"info string book on");
@@ -148,7 +148,7 @@ namespace NSProgram
 				engineProcess.StartInfo.WorkingDirectory = Path.GetDirectoryName(engineFile);
 				engineProcess.StartInfo.UseShellExecute = false;
 				engineProcess.StartInfo.RedirectStandardInput = true;
-				engineProcess.StartInfo.Arguments = arguments;
+				engineProcess.StartInfo.Arguments = engineArguments;
 				engineProcess.Start();
 				Console.WriteLine($"info string engine on");
 			}
@@ -279,7 +279,7 @@ namespace NSProgram
 						string move = String.Empty;
 						if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
 							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
-						if (move != String.Empty)
+						if (!String.IsNullOrEmpty(move))
 						{
 							Console.WriteLine($"bestmove {move}");
 							if (bookLoaded && isW && String.IsNullOrEmpty(lastFen) && (emptyRow > 0) && (emptyRow < bookAdd))
@@ -317,14 +317,14 @@ namespace NSProgram
 								book.chess.MakeMoves(uci);
 								string tnt = book.chess.GetTnt();
 								CRec rec = book.recList.GetRec(tnt);
-								rec.score = (short)td.score;
+								rec.score = td.score;
 								rec.depth = td.depth;
 								book.UpdateBack(uci);
 							}
 							td.finished = false;
 							td.moves = book.GetShallow();
 							teacher.SetTData(td);
-							if (td.moves != String.Empty)
+							if (!String.IsNullOrEmpty(td.moves))
 							{
 								book.UpdateBack(td.moves);
 								book.chess.SetFen();

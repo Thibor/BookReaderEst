@@ -432,28 +432,26 @@ namespace NSProgram
 				return 0;
 			chess.SetTnt(rec.tnt);
 			CEmoList emoList = GetEmoList();
-			int minDepth = upDepth ? 0 : rec.depth;
-			if (emoList.GetDepth(minDepth, out int depth))
-				if (emoList.GetScore(minDepth, out int score))
-				{
-					score = -score;
-					if (upDepth)
-					{
-						if (++depth > 0xff)
-							depth = 0xff;
-					}
-					else depth = emoList.GetDepth(rec.depth);
-					if (score > 0)
-						score--;
-					if (score < 0)
-						score++;
-					if ((rec.depth != depth) || (rec.score != score))
-					{
-						rec.depth = (byte)depth;
-						rec.score = (short)score;
-						return 1;
-					}
-				}
+			if (emoList.Count == 0)
+				return 0;
+			CRec bst = emoList[0].rec;
+			int depth = bst.depth;
+			int score = bst.score;
+			if (upDepth)
+				depth = emoList.GetMinDepth();
+			score = -score;
+			if (++depth > 0xff)
+				depth = 0xff;
+			if (score > 0)
+				score--;
+			if (score < 0)
+				score++;
+			if ((rec.depth != depth) || (rec.score != score))
+			{
+				rec.depth = (byte)depth;
+				rec.score = (short)score;
+				return 1;
+			}
 			return 0;
 		}
 

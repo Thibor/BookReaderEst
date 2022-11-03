@@ -353,7 +353,7 @@ namespace NSChess
 
 		public string GetFenBase()
 		{
-			string result = "";
+			string result = String.Empty;
 			string[] arr = { " ", "p", "n", "b", "r", "q", "k", " " };
 			for (int y = 0; y < 8; y++)
 			{
