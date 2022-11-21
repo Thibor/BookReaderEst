@@ -139,10 +139,13 @@ namespace NSProgram
 			string engineFile = String.Join(" ", listEf);
 			string engineArguments = String.Join(" ", listEa);
 			string teacherFile = String.Join(" ", listTf);
-			bookFile = ini.Read("book>file",bookFile);
-			engineFile = ini.Read("engine>file", engineFile);
-			engineArguments = ini.Read("engine>arguments", engineArguments);
-			teacherFile = ini.Read("teacher>file", teacherFile);
+			if (args.Length == 0)
+			{
+				bookFile = ini.Read("book>file");
+				engineFile = ini.Read("engine>file");
+				engineArguments = ini.Read("engine>arguments");
+				teacherFile = ini.Read("teacher>file");
+			}
 			string ext = Path.GetExtension(bookFile);
 			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
 			if (String.IsNullOrEmpty(ext))
