@@ -31,12 +31,12 @@ To use this program you need install  <a href="https://dotnet.microsoft.com/down
 
 ### Examples
 
-BookReaderTnt.exe **-bf bigtnt.tnt -ef stockfish.exe**<br/>
-BookReaderTnt.exe **bigtnt -ef stockfish.exe**
+BookReaderEst.exe **-bf bigtnt.tnt -ef stockfish.exe**<br/>
+BookReaderEst.exe **bigtnt -ef stockfish.exe**
 
 The program will first try to find move in chess opening book named bigtnt.tnt, and if it doesn't find any move in it, it will run a chess engine named stockfish.exe
 
-BookReaderTnt.exe **-bf bigtnt.tnt -w 100K -ef stockfish.exe**<br/>
-BookReaderTnt.exe **bigtnt -ef stockfish.exe -w 100K**
+BookReaderEst.exe **-bf bigtnt.tnt -w 100K -ef stockfish.exe**<br/>
+BookReaderEst.exe **bigtnt -ef stockfish.exe -w 100K**
 
 The program will first try to find move in chess opening book named bigtnt.tnt, and if it doesn't find any move in it, it will run a chess engine named stockfish.exe. If engine loose game, winner moves will be added to the book. If the book does not exist, the program will create it. 100k means that the book will grow to 100 000 moves, after exceeding this number, the less significant moves will be removed to make room for new ones.

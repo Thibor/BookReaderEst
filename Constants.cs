@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace NSProgram
 {
+
 	internal class Constants
 	{
+		public static ulong ul = 0xfffffffffffffffful;
 		public static short CHECKMATE_MAX = short.MaxValue;
 		public static short CHECKMATE_NEAR = 0x7000;
 	}

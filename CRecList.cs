@@ -46,7 +46,6 @@ namespace NSProgram
 				Clear();
 			else
 			{
-				Shuffle();
 				SortAge();
 				RemoveRange(Count - count, count);
 				SortTnt();
@@ -54,10 +53,31 @@ namespace NSProgram
 			return c - Count;
 		}
 
+		public int DeleteDoubled()
+		{
+			int result = 0;
+			string last = String.Empty;
+			for(int n=Count-1;n>=0;n--)
+			{
+				CRec rec = this[n];
+				if (rec.tnt == last)
+				{
+					result++;
+					RemoveAt(n);
+				}
+				last = rec.tnt;
+			}
+			return result;
+		}
+
+		public bool IsDoubled()
+		{
+			return DeleteDoubled() > 0;
+		}
+
 		public int DeleteNotUsed()
 		{
 			int del = 0;
-			Shuffle();
 			SortAge();
 			for (int n = Count - 1; n >= 0; n--)
 			{
@@ -135,6 +155,37 @@ namespace NSProgram
 			return false;
 		}
 
+		public bool IsSorted()
+		{
+			for (int n = 0; n < Count - 1; n++)
+			{
+				string t1 = this[n].tnt;
+				string t2 = this[n+1].tnt;
+				if (String.Compare(t1,t2, StringComparison.Ordinal) > 0)
+				{
+					Console.WriteLine($"sort fail record {n} count {SortFail()}");
+					Console.WriteLine(t1);
+					Console.WriteLine(t2);
+					return false;
+				}
+			}
+			Console.WriteLine("sort ok");
+			return true;
+		}
+
+		public int SortFail()
+		{
+			int result = 0;
+			for (int n = 0; n < Count - 1; n++)
+			{
+				string t1 = this[n].tnt;
+				string t2 = this[n + 1].tnt;
+				if (String.Compare(t1, t2, StringComparison.Ordinal) > 0)
+					result++;
+			}
+			return result;
+		}
+
 		public void SetUsed(bool u)
 		{
 			foreach (CRec rec in this)
@@ -150,7 +201,7 @@ namespace NSProgram
 			return used;
 		}
 
-		public void Shuffle()
+		public void SortRnd()
 		{
 			int n = Count;
 			while (n > 1)
@@ -170,6 +221,7 @@ namespace NSProgram
 
 		public void SortAge()
 		{
+			SortRnd();
 			Sort(delegate (CRec r1, CRec r2)
 			{
 				return r1.age - r2.age;
@@ -178,7 +230,7 @@ namespace NSProgram
 
 		public void SortDepth()
 		{
-			Shuffle();
+			SortRnd();
 			Sort(delegate (CRec r1, CRec r2)
 			{
 				return r1.depth - r2.depth;

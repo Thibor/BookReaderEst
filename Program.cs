@@ -3,11 +3,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using RapIni;
+using RapLog;
 
 namespace NSProgram
 {
+
 	class Program
 	{
+
 		/// <summary>
 		/// Book can write log file.
 		/// </summary>
@@ -27,8 +31,16 @@ namespace NSProgram
 		/// Limit ply to read.
 		/// </summary>
 		public static int bookLimitR = 0xf;
-		public static bool isIv = false;
+		public static bool isVersion = true;
 		public static CBook book = new CBook();
+		public static CRapIni ini = new CRapIni("BookReaderEst.ini");
+		public static CRapLog log = new CRapLog();
+
+		public static void LogMsg(string msg,bool con = true)
+		{
+			if (isLog && con)
+				log.Add(msg);
+		}
 
 		static void Main(string[] args)
 		{
@@ -50,7 +62,7 @@ namespace NSProgram
 			int bookRandom = 60;
 			string lastFen = String.Empty;
 			string lastMoves = String.Empty;
-			CUci Uci = new CUci();
+			CUci uci = new CUci();
 			CTeacher teacher = new CTeacher();
 			string ax = "-bf";
 			List<string> listBf = new List<string>();
@@ -84,9 +96,9 @@ namespace NSProgram
 						ax = ac;
 						isInfo = true;
 						break;
-					case "-iv":
+					case "-ver":
 						ax = ac;
-						isIv = true;
+						isVersion = false;
 						break;
 					default:
 						switch (ax)
@@ -125,16 +137,25 @@ namespace NSProgram
 			}
 			string bookFile = String.Join(" ", listBf);
 			string engineFile = String.Join(" ", listEf);
-			string teacherFile = String.Join(" ", listTf);
 			string engineArguments = String.Join(" ", listEa);
+			string teacherFile = String.Join(" ", listTf);
+			bookFile = ini.Read("book>file",bookFile);
+			engineFile = ini.Read("engine>file", engineFile);
+			engineArguments = ini.Read("engine>arguments", engineArguments);
+			teacherFile = ini.Read("teacher>file", teacherFile);
 			string ext = Path.GetExtension(bookFile);
-			Console.WriteLine($"info string book {CBook.name} ver {CBook.version}");
+			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
 			if (String.IsNullOrEmpty(ext))
 				bookFile = $"{bookFile}{CBook.defExt}";
 			bool bookLoaded = book.LoadFromFile(bookFile);
 			if (bookLoaded)
 			{
-				Console.WriteLine($"info string book on");
+				if (book.recList.Count > 0)
+				{
+					FileInfo fi = new FileInfo(book.path);
+					long bpm = (fi.Length << 3) / book.recList.Count;
+					Console.WriteLine($"info string book on {book.recList.Count:N0} moves {bpm} bpm");
+				}
 				if (isW)
 					Console.WriteLine($"info string write on");
 			}
@@ -162,10 +183,11 @@ namespace NSProgram
 			if (bookLoaded && teacher.enabled)
 			{
 				isW = true;
-				bookRandom = 0;
 				bookLimitR = 0;
 				bookLimitW = 0;
 			}
+			if (isW)
+				bookRandom = 0;
 			if (isInfo)
 				book.InfoMoves();
 			do
@@ -184,20 +206,20 @@ namespace NSProgram
 					Console.WriteLine("book structure - show structure of current book");
 					continue;
 				}
-				Uci.SetMsg(msg);
+				uci.SetMsg(msg);
 				int count = book.recList.Count;
-				if (Uci.command == "book")
+				if (uci.command == "book")
 				{
-					switch (Uci.tokens[1])
+					switch (uci.tokens[1])
 					{
 						case "addfen":
-							if (book.AddFen(Uci.GetValue(2, 0)))
+							if (book.AddFen(uci.GetValue(2, 0)))
 								Console.WriteLine("Fen have been added");
 							else
 								Console.WriteLine("Wrong fen");
 							break;
 						case "addfile":
-							string fn = Uci.GetValue(2, 0);
+							string fn = uci.GetValue(2, 0);
 							if (File.Exists(fn))
 							{
 								book.AddFile(fn);
@@ -206,7 +228,7 @@ namespace NSProgram
 							else Console.WriteLine("File not found");
 							break;
 						case "adduci":
-							book.AddUci(Uci.GetValue(2, 0));
+							book.AddUci(uci.GetValue(2, 0));
 							Console.WriteLine($"{(book.recList.Count - count):N0} moves have been added");
 							break;
 						case "clear":
@@ -214,15 +236,15 @@ namespace NSProgram
 							Console.WriteLine("Book is empty");
 							break;
 						case "delete":
-							int c = book.Delete(Uci.GetInt(2));
+							int c = book.Delete(uci.GetInt(2));
 							Console.WriteLine($"{c:N0} moves was deleted");
 							break;
 						case "load":
-							book.LoadFromFile(Uci.GetValue(2, 0));
+							book.LoadFromFile(uci.GetValue(2, 0));
 							book.ShowMoves(true);
 							break;
 						case "moves":
-							book.InfoMoves(Uci.GetValue(2, 0));
+							book.InfoMoves(uci.GetValue(2, 0));
 							break;
 						case "structure":
 							book.InfoStructure();
@@ -231,24 +253,25 @@ namespace NSProgram
 							book.Update();
 							break;
 						case "save":
-							if (book.SaveToFile(Uci.GetValue(2, 0)))
+							if (book.SaveToFile(uci.GetValue(2, 0)))
 								Console.WriteLine("The book has been saved");
 							else
 								Console.WriteLine("Writing to the file has failed");
 							break;
 						default:
-							Console.WriteLine($"Unknown command [{Uci.tokens[1]}]");
+							Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
 							break;
 					}
 					continue;
 				}
-				if ((Uci.command != "go") && (engineProcess != null))
+
+				if ((uci.command != "go") && (engineProcess != null))
 					engineProcess.StandardInput.WriteLine(msg);
-				switch (Uci.command)
+				switch (uci.command)
 				{
 					case "position":
-						lastFen = Uci.GetValue("fen", "moves");
-						lastMoves = Uci.GetValue("moves", "fen");
+						lastFen = uci.GetValue("fen", "moves");
+						lastMoves = uci.GetValue("moves", "fen");
 						book.chess.SetFen(lastFen);
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
@@ -279,7 +302,18 @@ namespace NSProgram
 						string move = String.Empty;
 						if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
 							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
-						if (!String.IsNullOrEmpty(move))
+						if (String.IsNullOrEmpty(move))
+						{
+							if (isLog && (!teacher.enabled) && (emptyTotal == 0))
+								log.Add(lastMoves);
+							emptyRow++;
+							emptyTotal++;
+							if (engineProcess == null)
+								Console.WriteLine("enginemove");
+							else
+								engineProcess.StandardInput.WriteLine(msg);
+						}
+						else
 						{
 							Console.WriteLine($"bestmove {move}");
 							if (bookLoaded && isW && String.IsNullOrEmpty(lastFen) && (emptyRow > 0) && (emptyRow < bookAdd))
@@ -289,15 +323,7 @@ namespace NSProgram
 								book.UpdateBack(lastMoves);
 							}
 							emptyRow = 0;
-						}
-						else
-						{
-							emptyRow++;
-							emptyTotal++;
-							if (engineProcess == null)
-								Console.WriteLine("enginemove");
-							else
-								engineProcess.StandardInput.WriteLine(msg);
+
 						}
 						break;
 				}
@@ -311,15 +337,19 @@ namespace NSProgram
 						{
 							if (!String.IsNullOrEmpty(td.moves))
 							{
-								string uci = $"{td.moves} {td.best}";
-								book.AddUci(uci);
-								book.chess.SetFen();
-								book.chess.MakeMoves(uci);
-								string tnt = book.chess.GetTnt();
+								string moves = $"{td.moves} {td.best}";
+								book.AddUci(moves);
+								string tnt = book.chess.GetTnt(moves);
+								book.recList.SortTnt();
 								CRec rec = book.recList.GetRec(tnt);
-								rec.score = td.score;
-								rec.depth = td.depth;
-								book.UpdateBack(uci);
+								if (rec == null)
+									Program.LogMsg($"wrong moves ({moves})");
+								else
+								{
+									rec.score = td.score;
+									rec.depth = td.depth;
+									book.UpdateBack(moves);
+								}
 							}
 							td.finished = false;
 							td.moves = book.GetShallow();
@@ -327,8 +357,7 @@ namespace NSProgram
 							if (!String.IsNullOrEmpty(td.moves))
 							{
 								book.UpdateBack(td.moves);
-								book.chess.SetFen();
-								book.chess.MakeMoves(td.moves);
+								book.chess.MakeMoves(td.moves, true);
 								string tnt = book.chess.GetTnt();
 								CRec bst = book.recList.GetRec(tnt);
 								List<int> moves = book.chess.GenerateValidMoves(out bool mate);
@@ -358,7 +387,7 @@ namespace NSProgram
 						book.SaveToFile();
 					}
 				}
-			} while (Uci.command != "quit");
+			} while (uci.command != "quit");
 			teacher.TeacherTerminate();
 		}
 	}

@@ -113,6 +113,12 @@ namespace NSProgram
 			return boaS;
 		}
 
+		public string GetTnt(string moves)
+		{
+			MakeMoves(moves,true);
+			return GetTnt();
+		}
+
 		public void SetTnt(string tnt)
 		{
 			whiteTurn = true;

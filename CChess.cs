@@ -718,8 +718,10 @@ namespace NSChess
 			return true;
 		}
 
-		public bool MakeMoves(string moves)
+		public bool MakeMoves(string moves,bool start = false)
 		{
+			if (start)
+				SetFen();
 			return MakeMoves(CUci.Split(moves));
 		}
 

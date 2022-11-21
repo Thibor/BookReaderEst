@@ -3,30 +3,313 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using RapLog;
 
 namespace NSProgram
 {
 
 	class CBook
 	{
-		string path = String.Empty;
+		public string path = String.Empty;
 		public int errors = 0;
 		public int maxRecords = 0;
-		public const string name = "BookReaderEst";
-		public const string version = "2022-08-17";
 		public string fileShortName = String.Empty;
 		string fileDirectory = String.Empty;
 		public const string defExt = ".est";
 		public CChessExt chess = new CChessExt();
 		readonly int[] arrAge = new int[0x100];
+		readonly CHeader header = new CHeader();
 		public CRecList recList = new CRecList();
 		public CBranchList branchList = new CBranchList();
-		public CRapLog log = new CRapLog();
+		readonly CBuffer buffer = new CBuffer();
+
+		#region file est
+
+		public bool SaveToEst(string p)
+		{
+			string pt = p + ".tmp";
+			RefreshAge();
+			int maxAge = GetMaxAge();
+			double totalDepth = 0;
+			Program.deleted = 0;
+			if (maxRecords > 0)
+				Program.deleted = recList.Count - maxRecords;
+			else if (maxAge == 0xff)
+				Program.deleted = AgeAvg() >> 5;
+			if (Program.deleted > 0)
+				Delete(Program.deleted);
+			Program.LogMsg("doubled records", recList.IsDoubled());
+			try
+			{
+				using (FileStream fs = File.Open(pt, FileMode.Create, FileAccess.Write, FileShare.None))
+				using (buffer.Bw = new BinaryWriter(fs))
+				{
+					string lastTnt = String.Empty;
+					buffer.Write(header.GetHeader());
+					foreach (CRec rec in recList)
+					{
+						totalDepth += rec.depth;
+						if (rec.tnt == lastTnt)
+						{
+							Program.deleted++;
+							continue;
+						}
+						if (rec.age < maxAge)
+							rec.age++;
+						TntToMac(rec.tnt, out ulong m, out byte[] a, out byte c);
+						buffer.Write(m);
+						for (int n = 0; n < c; n++)
+							buffer.Write(a[n], 4);
+						buffer.Write(rec.score);
+						buffer.Write(rec.age);
+						buffer.Write(rec.depth);
+						lastTnt = rec.tnt;
+					}
+					buffer.Write();
+				}
+			}
+			catch
+			{
+				return false;
+			}
+			try
+			{
+				if (File.Exists(p) && File.Exists(pt))
+					File.Delete(p);
+			}
+			catch
+			{
+				return false;
+			}
+			try
+			{
+				if (!File.Exists(p) && File.Exists(pt))
+					File.Move(pt, p);
+			}
+			catch
+			{
+				return false;
+			}
+			double depth = totalDepth / recList.Count;
+			if (Program.isLog && (maxAge > 0))
+				Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
+			return true;
+		}
+
+		bool AddFileTnt(string p)
+		{
+			string pt = p + ".tmp";
+			try
+			{
+				if (!File.Exists(p) && File.Exists(pt))
+					File.Move(pt, p);
+			}
+			catch
+			{
+				return false;
+			}
+			try
+			{
+				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
+				using (buffer.Br = new BinaryReader(fs))
+				{
+					string headerBst = header.GetHeader();
+					string headerCur = buffer.ReadString();
+					if (Program.isVersion && (headerCur != headerBst))
+						Console.WriteLine($"This program only supports version  [{headerBst}]");
+					else
+					{
+						while (buffer.Br.BaseStream.Position != buffer.Br.BaseStream.Length)
+						{
+							byte[] a = new byte[64];
+							ulong m = buffer.ReadUInt64();
+							int bc = BitCount(m);
+							for (int n = 0; n < bc; n++)
+								a[n] = (byte)buffer.Read(4);
+							CRec rec = new CRec
+							{
+								tnt = MacToTnt(m, a),
+								score = buffer.ReadInt16(),
+								age = buffer.ReadByte(),
+								depth = buffer.ReadByte()
+							};
+							recList.Add(rec);
+						}
+					}
+				}
+			}
+			catch
+			{
+				return false;
+			}
+			return true;
+		}
+
+
+		void TntToMac(string tnt, out ulong m, out byte[] a, out byte c)
+		{
+			m = 0xfffffffffffffffful;
+			a = new byte[64];
+			c = 0;
+			for (int n = 0; n < 64; n++)
+			{
+				byte p = 0;
+				switch (tnt[n])
+				{
+					case '-':
+						m ^= 1ul << n;
+						break;
+					case 'a':
+						p = 1;
+						break;
+					case 'P':
+						p = 2;
+						break;
+					case 'p':
+						p = 3;
+						break;
+					case 'N':
+						p = 4;
+						break;
+					case 'n':
+						p = 5;
+						break;
+					case 'B':
+						p = 6;
+						break;
+					case 'b':
+						p = 7;
+						break;
+					case 'R':
+						p = 8;
+						break;
+					case 'r':
+						p = 9;
+						break;
+					case 'Q':
+						p = 10;
+						break;
+					case 'q':
+						p = 11;
+						break;
+					case 'K':
+						p = 12;
+						break;
+					case 'k':
+						p = 13;
+						break;
+					case 'T':
+						p = 14;
+						break;
+					case 't':
+						p = 15;
+						break;
+				}
+				if (p > 0)
+					a[c++] = p;
+			}
+		}
+
+		string MacToTnt(ulong m, byte[] a)
+		{
+			string tnt = String.Empty;
+			int c = 0;
+			for (int n = 0; n < 64; n++)
+			{
+				if ((m & (1ul << n)) == 0)
+					tnt += '-';
+				else
+				{
+					byte p = a[c++];
+					switch (p)
+					{
+						case 1:
+							tnt += "a";
+							break;
+						case 2:
+							tnt += "P";
+							break;
+						case 3:
+							tnt += "p";
+							break;
+						case 4:
+							tnt += "N";
+							break;
+						case 5:
+							tnt += "n";
+							break;
+						case 6:
+							tnt += "B";
+							break;
+						case 7:
+							tnt += "b";
+							break;
+						case 8:
+							tnt += "R";
+							break;
+						case 9:
+							tnt += "r";
+							break;
+						case 10:
+							tnt += "Q";
+							break;
+						case 11:
+							tnt += "q";
+							break;
+						case 12:
+							tnt += "K";
+							break;
+						case 13:
+							tnt += "k";
+							break;
+						case 14:
+							tnt += "T";
+							break;
+						case 15:
+							tnt += "t";
+							break;
+					}
+				}
+			}
+			return tnt;
+		}
+
+		#endregion file est
+
+		#region file uci
+
+		void AddFileUci(string p)
+		{
+			string[] lines = File.ReadAllLines(p);
+			foreach (string uci in lines)
+				AddUci(uci);
+		}
+
+		#endregion file uci
+
+		#region file txt
+
+		public bool SaveToTxt(string p)
+		{
+			int line = 0;
+			FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None);
+			using (StreamWriter sw = new StreamWriter(fs))
+			{
+				foreach (CRec rec in recList)
+				{
+					string l = $"{rec.tnt} {rec.depth} {rec.score:+#;-#;+0}";
+					sw.WriteLine(l);
+					Console.Write($"\rRecord {++line}");
+				}
+			}
+			Console.WriteLine();
+			return true;
+		}
+
+		#endregion file txt
 
 		public void ShowMoves(bool last = false)
 		{
-			Console.Write($"\r{recList.Count} moves");
+			Console.Write($"\r{recList.Count} moves ");
 			if (last)
 			{
 				Console.WriteLine();
@@ -59,11 +342,6 @@ namespace NSProgram
 		public void Clear()
 		{
 			recList.Clear();
-		}
-
-		string GetHeader()
-		{
-			return $"{name} {version}";
 		}
 
 		string GetBookFile()
@@ -129,200 +407,7 @@ namespace NSProgram
 				AddFileUci(p);
 			else if (ext == ".pgn")
 				AddFilePgn(p);
-			Console.WriteLine($"info string moves {recList.Count:N0}");
 			return result;
-		}
-
-		void TntToMbw(string tnt, out ulong m, out ulong b, out ulong w)
-		{
-			m = 0xFFFFFFFFFFFFFFFF;
-			b = 0;
-			w = 0;
-			int z = 0;
-			for (int n = 0; n < 64; n++)
-			{
-				ulong p = 0;
-				switch (tnt[n])
-				{
-					case '-':
-						m ^= 1ul << n;
-						break;
-					case 'a':
-						p = 1;
-						break;
-					case 'P':
-						p = 2;
-						break;
-					case 'p':
-						p = 3;
-						break;
-					case 'N':
-						p = 4;
-						break;
-					case 'n':
-						p = 5;
-						break;
-					case 'B':
-						p = 6;
-						break;
-					case 'b':
-						p = 7;
-						break;
-					case 'R':
-						p = 8;
-						break;
-					case 'r':
-						p = 9;
-						break;
-					case 'Q':
-						p = 10;
-						break;
-					case 'q':
-						p = 11;
-						break;
-					case 'K':
-						p = 12;
-						break;
-					case 'k':
-						p = 13;
-						break;
-					case 'T':
-						p = 14;
-						break;
-					case 't':
-						p = 15;
-						break;
-				}
-				if (p > 0)
-				{
-					int s = (z & 0xf) << 2;
-					if (z++ < 16)
-						b |= p << s;
-					else
-						w |= p << s;
-				}
-			}
-		}
-
-		string MbwToTnt(ulong m, ulong b, ulong w)
-		{
-			string tnt = String.Empty;
-			int z = 0;
-			for (int n = 0; n < 64; n++)
-			{
-				if ((m & (1ul << n)) == 0)
-					tnt += "-";
-				else
-				{
-					int s = (z & 0xf) << 2;
-					ulong p = z++ < 16 ? (b >> s) & 0xf : (w >> s) & 0xf;
-					switch (p)
-					{
-						case 1:
-							tnt += "a";
-							break;
-						case 2:
-							tnt += "P";
-							break;
-						case 3:
-							tnt += "p";
-							break;
-						case 4:
-							tnt += "N";
-							break;
-						case 5:
-							tnt += "n";
-							break;
-						case 6:
-							tnt += "B";
-							break;
-						case 7:
-							tnt += "b";
-							break;
-						case 8:
-							tnt += "R";
-							break;
-						case 9:
-							tnt += "r";
-							break;
-						case 10:
-							tnt += "Q";
-							break;
-						case 11:
-							tnt += "q";
-							break;
-						case 12:
-							tnt += "K";
-							break;
-						case 13:
-							tnt += "k";
-							break;
-						case 14:
-							tnt += "T";
-							break;
-						case 15:
-							tnt += "t";
-							break;
-					}
-				}
-			}
-			return tnt;
-		}
-
-		bool AddFileTnt(string p)
-		{
-			string pt = p + ".tmp";
-			try
-			{
-				if (!File.Exists(p) && File.Exists(pt))
-					File.Move(pt, p);
-			}
-			catch
-			{
-				return false;
-			}
-			try
-			{
-				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					using (BinaryReader reader = new BinaryReader(fs))
-					{
-						string headerBst = GetHeader();
-						string headerCur = reader.ReadString();
-						if (!Program.isIv && (headerCur != headerBst))
-							Console.WriteLine($"This program only supports version  [{headerBst}]");
-						else
-						{
-							while (reader.BaseStream.Position != reader.BaseStream.Length)
-							{
-								ulong m = ReadUInt64(reader);
-								ulong b = ReadUInt64(reader);
-								ulong w = ReadUInt64(reader);
-								CRec rec = new CRec
-								{
-									tnt = MbwToTnt(m, b, w),
-									score = ReadInt16(reader),
-									age = reader.ReadByte(),
-									depth = reader.ReadByte()
-								};
-								recList.Add(rec);
-							}
-						}
-					}
-				}
-			}
-			catch
-			{
-				return false;
-			}
-			return true;
-		}
-
-		void AddFileUci(string p)
-		{
-			string[] lines = File.ReadAllLines(p);
-			foreach (string uci in lines)
-				AddUci(uci);
 		}
 
 		void AddFilePgn(string p)
@@ -377,6 +462,13 @@ namespace NSProgram
 				return true;
 			}
 			return false;
+		}
+
+		public static int BitCount(ulong bitboard)
+		{
+			bitboard -= (bitboard >> 1) & 0x5555555555555555UL;
+			bitboard = (bitboard & 0x3333333333333333UL) + ((bitboard >> 2) & 0x3333333333333333UL);
+			return (int)(((bitboard + (bitboard >> 4) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >> 56);
 		}
 
 		public bool UpdateBack(string moves, bool mate = false)
@@ -455,19 +547,18 @@ namespace NSProgram
 			return 0;
 		}
 
-		public CRec AddUci(string moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
+		public bool AddUci(string moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
 			return AddUci(moves.Trim().Split(' '), upAge, limitPly, limitAdd);
 		}
 
-		public CRec AddUci(List<string> moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
+		public bool AddUci(List<string> moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
 			return AddUci(moves.ToArray(), upAge, limitPly, limitAdd);
 		}
 
-		public CRec AddUci(string[] moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
+		public bool AddUci(string[] moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
-			CRec rec = null;
 			int ca = 0;
 			if ((limitPly == 0) || (limitPly > moves.Length))
 				limitPly = moves.Length;
@@ -477,10 +568,8 @@ namespace NSProgram
 				string m = moves[n];
 				if (chess.MakeMove(m, out _))
 				{
-					rec = new CRec
-					{
-						tnt = chess.GetTnt()
-					};
+					CRec rec = new CRec();
+					rec.tnt = chess.GetTnt();
 					if (recList.AddRec(rec, upAge))
 					{
 						Program.added++;
@@ -489,9 +578,9 @@ namespace NSProgram
 					}
 				}
 				else
-					break;
+					return false;
 			}
-			return rec;
+			return true;
 		}
 
 		void RefreshAge()
@@ -500,44 +589,6 @@ namespace NSProgram
 				arrAge[n] = 0;
 			foreach (CRec rec in recList)
 				arrAge[rec.age]++;
-		}
-
-		void WriteUInt64(BinaryWriter writer, ulong v)
-		{
-			byte[] bytes = BitConverter.GetBytes(v);
-			if (BitConverter.IsLittleEndian)
-				Array.Reverse(bytes);
-			writer.Write(bytes);
-		}
-
-		ulong ReadUInt64(BinaryReader reader)
-		{
-			ulong v = reader.ReadUInt64();
-			if (BitConverter.IsLittleEndian)
-			{
-				byte[] bytes = BitConverter.GetBytes(v).Reverse().ToArray();
-				return BitConverter.ToUInt64(bytes, 0);
-			}
-			return v;
-		}
-
-		void WriteInt16(BinaryWriter writer, short v)
-		{
-			byte[] bytes = BitConverter.GetBytes(v);
-			if (BitConverter.IsLittleEndian)
-				Array.Reverse(bytes);
-			writer.Write(bytes);
-		}
-
-		short ReadInt16(BinaryReader reader)
-		{
-			short v = reader.ReadInt16();
-			if (BitConverter.IsLittleEndian)
-			{
-				byte[] bytes = BitConverter.GetBytes(v).Reverse().ToArray();
-				return BitConverter.ToInt16(bytes, 0);
-			}
-			return v;
 		}
 
 		public bool SaveToFile(string p)
@@ -568,95 +619,6 @@ namespace NSProgram
 				foreach (String uci in sl)
 					sw.WriteLine(uci);
 			}
-			return true;
-		}
-
-		public bool SaveToTxt(string p)
-		{
-			int line = 0;
-			FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None);
-			using (StreamWriter sw = new StreamWriter(fs))
-			{
-				foreach (CRec rec in recList)
-				{
-					string l = $"{rec.tnt} {rec.depth} {rec.score:+#;-#;+0}";
-					sw.WriteLine(l);
-					Console.Write($"\rRecord {++line}");
-				}
-			}
-			Console.WriteLine();
-			return true;
-		}
-
-		public bool SaveToEst(string p)
-		{
-			string pt = p + ".tmp";
-			RefreshAge();
-			int maxAge = GetMaxAge();
-			double totalDepth = 0;
-			Program.deleted = 0;
-			if (maxRecords > 0)
-				Program.deleted = recList.Count - maxRecords;
-			else if (maxAge == 0xff)
-				Program.deleted = AgeAvg() >> 5;
-			if (Program.deleted > 0)
-				Delete(Program.deleted);
-			try
-			{
-				using (FileStream fs = File.Open(pt, FileMode.Create, FileAccess.Write, FileShare.None))
-				{
-					using (BinaryWriter writer = new BinaryWriter(fs))
-					{
-						string lastTnt = String.Empty;
-						recList.SortTnt();
-						writer.Write(GetHeader());
-						foreach (CRec rec in recList)
-						{
-							totalDepth += rec.depth;
-							if (rec.tnt == lastTnt)
-							{
-								Program.deleted++;
-								continue;
-							}
-							if (rec.age < maxAge)
-								rec.age++;
-							TntToMbw(rec.tnt, out ulong m, out ulong b, out ulong w);
-							WriteUInt64(writer, m);
-							WriteUInt64(writer, b);
-							WriteUInt64(writer, w);
-							WriteInt16(writer, rec.score);
-							writer.Write(rec.age);
-							writer.Write(rec.depth);
-							lastTnt = rec.tnt;
-						}
-					}
-				}
-			}
-			catch
-			{
-				return false;
-			}
-			try
-			{
-				if (File.Exists(p) && File.Exists(pt))
-					File.Delete(p);
-			}
-			catch
-			{
-				return false;
-			}
-			try
-			{
-				if (!File.Exists(p) && File.Exists(pt))
-					File.Move(pt, p);
-			}
-			catch
-			{
-				return false;
-			}
-			double depth = totalDepth / recList.Count;
-			if (Program.isLog && (maxAge > 0))
-				log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
 			return true;
 		}
 
@@ -894,6 +856,213 @@ namespace NSProgram
 				SaveToFile();
 			} while ((max > up) && (up > 0));
 			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
+		}
+
+		void TntToMbw(string tnt, out ulong m, out ulong b, out ulong w)
+		{
+			m = 0xFFFFFFFFFFFFFFFF;
+			b = 0;
+			w = 0;
+			int z = 0;
+			for (int n = 0; n < 64; n++)
+			{
+				ulong p = 0;
+				switch (tnt[n])
+				{
+					case '-':
+						m ^= 1ul << n;
+						break;
+					case 'a':
+						p = 1;
+						break;
+					case 'P':
+						p = 2;
+						break;
+					case 'p':
+						p = 3;
+						break;
+					case 'N':
+						p = 4;
+						break;
+					case 'n':
+						p = 5;
+						break;
+					case 'B':
+						p = 6;
+						break;
+					case 'b':
+						p = 7;
+						break;
+					case 'R':
+						p = 8;
+						break;
+					case 'r':
+						p = 9;
+						break;
+					case 'Q':
+						p = 10;
+						break;
+					case 'q':
+						p = 11;
+						break;
+					case 'K':
+						p = 12;
+						break;
+					case 'k':
+						p = 13;
+						break;
+					case 'T':
+						p = 14;
+						break;
+					case 't':
+						p = 15;
+						break;
+				}
+				if (p > 0)
+				{
+					int s = (z & 0xf) << 2;
+					if (z++ < 16)
+						b |= p << s;
+					else
+						w |= p << s;
+				}
+			}
+		}
+
+		string MbwToTnt(ulong m, ulong b, ulong w)
+		{
+			string tnt = String.Empty;
+			int z = 0;
+			for (int n = 0; n < 64; n++)
+			{
+				if ((m & (1ul << n)) == 0)
+					tnt += "-";
+				else
+				{
+					int s = (z & 0xf) << 2;
+					ulong p = z++ < 16 ? (b >> s) & 0xf : (w >> s) & 0xf;
+					switch (p)
+					{
+						case 1:
+							tnt += "a";
+							break;
+						case 2:
+							tnt += "P";
+							break;
+						case 3:
+							tnt += "p";
+							break;
+						case 4:
+							tnt += "N";
+							break;
+						case 5:
+							tnt += "n";
+							break;
+						case 6:
+							tnt += "B";
+							break;
+						case 7:
+							tnt += "b";
+							break;
+						case 8:
+							tnt += "R";
+							break;
+						case 9:
+							tnt += "r";
+							break;
+						case 10:
+							tnt += "Q";
+							break;
+						case 11:
+							tnt += "q";
+							break;
+						case 12:
+							tnt += "K";
+							break;
+						case 13:
+							tnt += "k";
+							break;
+						case 14:
+							tnt += "T";
+							break;
+						case 15:
+							tnt += "t";
+							break;
+					}
+				}
+			}
+			return tnt;
+		}
+
+		bool AddFileTnt2(string p)
+		{
+			string pt = p + ".tmp";
+			try
+			{
+				if (!File.Exists(p) && File.Exists(pt))
+					File.Move(pt, p);
+			}
+			catch
+			{
+				return false;
+			}
+			try
+			{
+				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					using (BinaryReader reader = new BinaryReader(fs))
+					{
+						string headerBst = header.GetHeader();
+						string headerCur = reader.ReadString();
+						if (Program.isVersion && (headerCur != headerBst))
+							Console.WriteLine($"This program only supports version  [{headerBst}]");
+						else
+						{
+							while (reader.BaseStream.Position != reader.BaseStream.Length)
+							{
+								ulong m = ReadUInt64(reader);
+								ulong b = ReadUInt64(reader);
+								ulong w = ReadUInt64(reader);
+								CRec rec = new CRec
+								{
+									tnt = MbwToTnt(m, b, w),
+									score = ReadInt16(reader),
+									age = reader.ReadByte(),
+									depth = reader.ReadByte()
+								};
+								recList.Add(rec);
+							}
+						}
+					}
+				}
+			}
+			catch
+			{
+				return false;
+			}
+			return true;
+		}
+
+		ulong ReadUInt64(BinaryReader reader)
+		{
+			ulong v = reader.ReadUInt64();
+			if (BitConverter.IsLittleEndian)
+			{
+				byte[] bytes = BitConverter.GetBytes(v).Reverse().ToArray();
+				return BitConverter.ToUInt64(bytes, 0);
+			}
+			return v;
+		}
+
+		short ReadInt16(BinaryReader reader)
+		{
+			short v = reader.ReadInt16();
+			if (BitConverter.IsLittleEndian)
+			{
+				byte[] bytes = BitConverter.GetBytes(v).Reverse().ToArray();
+				return BitConverter.ToInt16(bytes, 0);
+			}
+			return v;
 		}
 
 	}

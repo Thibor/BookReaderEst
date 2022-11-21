@@ -45,11 +45,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CBranchList.cs" />
+    <Compile Include="CBuffer.cs" />
     <Compile Include="CChess.cs" />
     <Compile Include="CBook.cs" />
     <Compile Include="CChessExt.cs" />
+    <Compile Include="CHeader.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="CEmoList.cs" />
+    <Compile Include="CRapIni.cs" />
     <Compile Include="CRapLog.cs" />
     <Compile Include="CRecList.cs" />
     <Compile Include="CTeacher.cs" />

@@ -8,18 +8,18 @@ namespace RapLog
 {
 	public class CRapLog
 	{
-		bool addDate;
-		int max;
-		string path;
+		readonly bool addDate;
+		readonly int max;
+		readonly string path;
 
-		public CRapLog(string p = "",int m = 100,bool a = true)
+		public CRapLog(string path = "",int max = 100,bool addDate = true)
 		{
-			path = p;
-			max = m;
-			addDate = a;
-			if(path == String.Empty) {
+			this.path = path;
+			this.max = max;
+			this.addDate = addDate;
+			if(String.IsNullOrEmpty(path)) {
 				string name = Assembly.GetExecutingAssembly().GetName().Name + ".log";
-				path = new FileInfo(name).FullName.ToString();
+				this.path = new FileInfo(name).FullName.ToString();
 			}
 		}
 
@@ -36,6 +36,14 @@ namespace RapLog
 			if ((count > 0) && (max > 0))
 				list.RemoveRange(100, count);
 			File.WriteAllLines(path, list);
+		}
+
+		public List<string> List()
+		{
+			List<string> list = new List<string>();
+			if (File.Exists(path))
+				list = File.ReadAllLines(path).ToList();
+			return list;
 		}
 
 	}
