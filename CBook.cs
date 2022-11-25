@@ -43,7 +43,7 @@ namespace NSProgram
 				using (FileStream fs = File.Open(pt, FileMode.Create, FileAccess.Write, FileShare.None))
 				using (buffer.Bw = new BinaryWriter(fs))
 				{
-					string lastTnt = String.Empty;
+					string lastTnt = new string('-',64);
 					buffer.Write(header.GetHeader());
 					foreach (CRec rec in recList)
 					{
@@ -55,10 +55,20 @@ namespace NSProgram
 						}
 						if (rec.age < maxAge)
 							rec.age++;
-						TntToMac(rec.tnt, out ulong m, out byte[] a, out byte c);
+						ulong zip = (ulong)lastTnt.Zip(rec.tnt, (c1, c2) => c1 == c2).TakeWhile(b => b).Count();
+						buffer.Write(zip, 6);
+						for(int n=(int)zip;n<64;n++)
+						{
+							ulong ul = (ulong)TntToInt(rec.tnt[n]);
+							if (ul == 0)
+								buffer.Write(1, 1);
+							else
+								buffer.Write(ul,5);
+						}
+						/*TntToMac(rec.tnt, out ulong m, out byte[] a, out byte c);
 						buffer.Write(m);
 						for (int n = 0; n < c; n++)
-							buffer.Write(a[n], 4);
+							buffer.Write(a[n], 4);*/
 						buffer.Write(rec.score);
 						buffer.Write(rec.age);
 						buffer.Write(rec.depth);
@@ -112,6 +122,7 @@ namespace NSProgram
 				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
 				using (buffer.Br = new BinaryReader(fs))
 				{
+					string lastTnt = new string('-', 64);
 					string headerBst = header.GetHeader();
 					string headerCur = buffer.ReadString();
 					if (Program.isVersion && (headerCur != headerBst))
@@ -120,19 +131,27 @@ namespace NSProgram
 					{
 						while (buffer.Br.BaseStream.Position != buffer.Br.BaseStream.Length)
 						{
+							ulong zip = buffer.Read(6);
 							byte[] a = new byte[64];
-							ulong m = buffer.ReadUInt64();
+							string tnt = lastTnt.Substring(0,(int)zip);
+							for (int n = (int)zip; n < 64; n++)
+								if (buffer.Read(1) == 0)
+									tnt += IntToTnt((int)buffer.Read(4));
+								else
+									tnt += '-';
+							/*ulong m = buffer.ReadUInt64();
 							int bc = BitCount(m);
 							for (int n = 0; n < bc; n++)
-								a[n] = (byte)buffer.Read(4);
+								a[n] = (byte)buffer.Read(4);*/
 							CRec rec = new CRec
 							{
-								tnt = MacToTnt(m, a),
+								tnt = tnt,
 								score = buffer.ReadInt16(),
 								age = buffer.ReadByte(),
 								depth = buffer.ReadByte()
 							};
 							recList.Add(rec);
+							lastTnt = rec.tnt;
 						}
 					}
 				}
@@ -144,133 +163,14 @@ namespace NSProgram
 			return true;
 		}
 
-
-		void TntToMac(string tnt, out ulong m, out byte[] a, out byte c)
+		int TntToInt(char tnt)
 		{
-			m = 0xfffffffffffffffful;
-			a = new byte[64];
-			c = 0;
-			for (int n = 0; n < 64; n++)
-			{
-				byte p = 0;
-				switch (tnt[n])
-				{
-					case '-':
-						m ^= 1ul << n;
-						break;
-					case 'a':
-						p = 1;
-						break;
-					case 'P':
-						p = 2;
-						break;
-					case 'p':
-						p = 3;
-						break;
-					case 'N':
-						p = 4;
-						break;
-					case 'n':
-						p = 5;
-						break;
-					case 'B':
-						p = 6;
-						break;
-					case 'b':
-						p = 7;
-						break;
-					case 'R':
-						p = 8;
-						break;
-					case 'r':
-						p = 9;
-						break;
-					case 'Q':
-						p = 10;
-						break;
-					case 'q':
-						p = 11;
-						break;
-					case 'K':
-						p = 12;
-						break;
-					case 'k':
-						p = 13;
-						break;
-					case 'T':
-						p = 14;
-						break;
-					case 't':
-						p = 15;
-						break;
-				}
-				if (p > 0)
-					a[c++] = p;
-			}
+			return "-aPpNnBbRrQqKkTt".IndexOf(tnt);
 		}
 
-		string MacToTnt(ulong m, byte[] a)
+		char IntToTnt(int i)
 		{
-			string tnt = String.Empty;
-			int c = 0;
-			for (int n = 0; n < 64; n++)
-			{
-				if ((m & (1ul << n)) == 0)
-					tnt += '-';
-				else
-				{
-					byte p = a[c++];
-					switch (p)
-					{
-						case 1:
-							tnt += "a";
-							break;
-						case 2:
-							tnt += "P";
-							break;
-						case 3:
-							tnt += "p";
-							break;
-						case 4:
-							tnt += "N";
-							break;
-						case 5:
-							tnt += "n";
-							break;
-						case 6:
-							tnt += "B";
-							break;
-						case 7:
-							tnt += "b";
-							break;
-						case 8:
-							tnt += "R";
-							break;
-						case 9:
-							tnt += "r";
-							break;
-						case 10:
-							tnt += "Q";
-							break;
-						case 11:
-							tnt += "q";
-							break;
-						case 12:
-							tnt += "K";
-							break;
-						case 13:
-							tnt += "k";
-							break;
-						case 14:
-							tnt += "T";
-							break;
-						case 15:
-							tnt += "t";
-							break;
-					}
-				}
-			}
-			return tnt;
+			return "-aPpNnBbRrQqKkTt"[i];
 		}
 
 		#endregion file est
