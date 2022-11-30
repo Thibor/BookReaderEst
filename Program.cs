@@ -22,18 +22,18 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookAdd = 5;
+		public static int bookLimitAdd = 4;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
-		public static int bookLimitW = 32;
+		public static int bookLimitW = 0;
 		/// <summary>
 		/// Limit ply to read.
 		/// </summary>
-		public static int bookLimitR = 0xf;
+		public static int bookLimitR = 8;
 		public static bool isVersion = true;
 		public static CBook book = new CBook();
-		public static CRapIni ini = new CRapIni("BookReaderEst.ini");
+		public static CRapIni ini = new CRapIni();
 		public static CRapLog log = new CRapLog();
 
 		public static void LogMsg(string msg,bool con = true)
@@ -120,7 +120,7 @@ namespace NSProgram
 								book.maxRecords = int.TryParse(ac, out int m) ? m : 0;
 								break;
 							case "-add":
-								bookAdd = int.TryParse(ac, out int a) ? a : bookAdd;
+								bookLimitAdd = int.TryParse(ac, out int a) ? a : bookLimitAdd;
 								break;
 							case "-rnd":
 								bookRandom = int.TryParse(ac, out int r) ? r : 0;
@@ -187,7 +187,6 @@ namespace NSProgram
 			{
 				isW = true;
 				bookLimitR = 0;
-				bookLimitW = 0;
 			}
 			if (isW)
 				bookRandom = 0;
@@ -294,7 +293,7 @@ namespace NSProgram
 								{
 									string movesUci = $"{lastMoves} {myMove} {enMove}";
 									if (bookWrite)
-										book.AddUci(movesUci, true, 0, bookAdd);
+										book.AddUci(movesUci, true, bookLimitW, bookLimitAdd);
 									book.UpdateBack(movesUci, true);
 									bookChanged = true;
 									teacher.Stop();
@@ -319,7 +318,7 @@ namespace NSProgram
 						else
 						{
 							Console.WriteLine($"bestmove {move}");
-							if (bookLoaded && isW && String.IsNullOrEmpty(lastFen) && (emptyRow > 0) && (emptyRow < bookAdd))
+							if (bookLoaded && isW && String.IsNullOrEmpty(lastFen) && (emptyRow > 0) && (emptyRow < bookLimitAdd))
 							{
 								bookChanged = true;
 								book.AddUci(lastMoves);
