@@ -62,7 +62,7 @@ namespace NSProgram
 				if (!String.IsNullOrEmpty(e.Data))
 				{
 					uci.SetMsg(e.Data);
-					if (uci.command == "bestmove")
+					if (uci.First() == "bestmove")
 					{
 						CTData td = GetTData();
 						uci.GetValue("bestmove", out td.best);
@@ -152,7 +152,7 @@ namespace NSProgram
 			TeacherWriteLine("stop");
 		}
 
-		public bool SetTeacher(string teacherFile)
+		public bool SetTeacherFile(string teacherFile)
 		{
 			enabled = false;
 			if (File.Exists(teacherFile))

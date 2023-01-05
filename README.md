@@ -9,13 +9,14 @@ To use this program you need install  <a href="https://dotnet.microsoft.com/down
 **-ef** chess Engine File<br/>
 **-tf** chess Teacher File<br/>
 **-ea** chess Engine Arguments<br/>
-**-w** add moves to the book<br/>
+**-w** Write new moves to the book<br/>
 **-u** update moves in the book<br/>
 **-lr** Limit maximum ply depth when Read from book (default 8) 0 means no limit<br/>
 **-lw** Limit maximum ply depth when Write to book (default 0) 0 means no limit<br/>
 **-add** Limit ADDed moves per game (default 4) 0 means no limit<br/>
 **-rnd** RaNDomization (default 50) 0 - means choose best move 100 - mean choose random move 200 - mean choose worst move<br/>
 **-log** Create LOG file<br/>
+**-info** show additional INFOrmation<br/>
 
 ## Console commands
 
@@ -28,6 +29,8 @@ To use this program you need install  <a href="https://dotnet.microsoft.com/down
 **book addfen** [fen] - add position in fen format<br/>
 **book moves** [uci] - make sequence of moves in uci format and shows possible continuations<br/>
 **book structure** - show structure of current book<br/>
+**book getoption** - show options<br/>
+**book setoption name [option name] value [option value]** - set option<br/>
 **quit** quit the program as soon as possible
 
 ### Examples

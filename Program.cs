@@ -36,7 +36,7 @@ namespace NSProgram
 		public static CRapIni ini = new CRapIni();
 		public static CRapLog log = new CRapLog();
 
-		public static void LogMsg(string msg,bool con = true)
+		public static void LogMsg(string msg, bool con = true)
 		{
 			if (isLog && con)
 				log.Add(msg);
@@ -146,11 +146,8 @@ namespace NSProgram
 				engineArguments = ini.Read("engine>arguments");
 				teacherFile = ini.Read("teacher>file");
 			}
-			string ext = Path.GetExtension(bookFile);
 			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
-			if (String.IsNullOrEmpty(ext))
-				bookFile = $"{bookFile}{CBook.defExt}";
-			bool bookLoaded = book.LoadFromFile(bookFile);
+			bool bookLoaded = SetBookFile(bookFile);
 			if (bookLoaded)
 			{
 				if (book.recList.Count > 0)
@@ -164,24 +161,17 @@ namespace NSProgram
 			}
 			else
 				isW = false;
-			Process engineProcess = null;
-			if (File.Exists(engineFile))
-			{
-				engineProcess = new Process();
-				engineProcess.StartInfo.FileName = engineFile;
-				engineProcess.StartInfo.WorkingDirectory = Path.GetDirectoryName(engineFile);
-				engineProcess.StartInfo.UseShellExecute = false;
-				engineProcess.StartInfo.RedirectStandardInput = true;
-				engineProcess.StartInfo.Arguments = engineArguments;
-				engineProcess.Start();
+			Process engineProcess;
+			if (SetEngineFile(engineFile))
 				Console.WriteLine($"info string engine on");
-			}
-			else if (engineFile != String.Empty)
-				Console.WriteLine($"info string missing engine  [{engineFile}]");
-
-
-			if (teacher.SetTeacher(teacherFile))
+			else
+				if (engineFile != string.Empty)
+				Console.WriteLine($"info string missing file [{engineFile}]");
+			if (SetTeacherFile(teacherFile))
 				Console.WriteLine($"info string teacher on");
+			else
+				if (teacherFile != string.Empty)
+				Console.WriteLine($"info string missing file [{teacherFile}]");
 
 			if (bookLoaded && teacher.enabled)
 			{
@@ -206,22 +196,24 @@ namespace NSProgram
 					Console.WriteLine("book clear - clear all moves from the book");
 					Console.WriteLine("book moves [uci] - make sequence of moves in uci format and shows possible continuations");
 					Console.WriteLine("book structure - show structure of current book");
+					Console.WriteLine("book getoption - show options");
+					Console.WriteLine("book setoption name [option name] value [option value] - set option");
 					continue;
 				}
 				uci.SetMsg(msg);
 				int count = book.recList.Count;
-				if (uci.command == "book")
+				if (uci.First() == "book")
 				{
 					switch (uci.tokens[1])
 					{
 						case "addfen":
-							if (book.AddFen(uci.GetValue(2, 0)))
+							if (book.AddFen(uci.GetValue("addfen")))
 								Console.WriteLine("Fen have been added");
 							else
 								Console.WriteLine("Wrong fen");
 							break;
 						case "addfile":
-							string fn = uci.GetValue(2, 0);
+							string fn = uci.GetValue("addfile");
 							if (File.Exists(fn))
 							{
 								book.AddFile(fn);
@@ -230,7 +222,7 @@ namespace NSProgram
 							else Console.WriteLine("File not found");
 							break;
 						case "adduci":
-							book.AddUci(uci.GetValue(2, 0));
+							book.AddUci(uci.GetValue("adduci"));
 							Console.WriteLine($"{(book.recList.Count - count):N0} moves have been added");
 							break;
 						case "clear":
@@ -238,15 +230,15 @@ namespace NSProgram
 							Console.WriteLine("Book is empty");
 							break;
 						case "delete":
-							int c = book.Delete(uci.GetInt(2));
+							int c = book.Delete(uci.GetInt("delete"));
 							Console.WriteLine($"{c:N0} moves was deleted");
 							break;
 						case "load":
-							book.LoadFromFile(uci.GetValue(2, 0));
+							book.LoadFromFile(uci.GetValue("load"));
 							book.ShowMoves(true);
 							break;
 						case "moves":
-							book.InfoMoves(uci.GetValue(2, 0));
+							book.InfoMoves(uci.GetValue("moves"));
 							break;
 						case "structure":
 							book.InfoStructure();
@@ -255,10 +247,58 @@ namespace NSProgram
 							book.Update();
 							break;
 						case "save":
-							if (book.SaveToFile(uci.GetValue(2, 0)))
+							if (book.SaveToFile(uci.GetValue("save")))
 								Console.WriteLine("The book has been saved");
 							else
 								Console.WriteLine("Writing to the file has failed");
+							break;
+						case "getoption":
+							Console.WriteLine($"option name Book file type string default book{CBook.defExt}");
+							Console.WriteLine($"option name Engine file type string default");
+							Console.WriteLine($"option name Engine arguments type string default");
+							Console.WriteLine($"option name Teacher file type string default");
+							Console.WriteLine($"option name Write type check default false");
+							Console.WriteLine($"option name Log type check default false");
+							Console.WriteLine($"option name Limit add moves type spin default {bookLimitAdd} min 0 max 100");
+							Console.WriteLine($"option name Limit read moves type spin default {bookLimitR} min 0 max 100");
+							Console.WriteLine($"option name Limit write moves type spin default {bookLimitW} min 0 max 100");
+							Console.WriteLine($"option name Random moves type spin default {bookRandom} min 0 max 201");
+							Console.WriteLine("optionok");
+							break;
+						case "setoption":
+							switch (uci.GetValue("name", "value").ToLower())
+							{
+								case "book file":
+									SetBookFile(uci.GetValue("value"));
+									break;
+								case "engine file":
+									engineFile = uci.GetValue("value");
+									break;
+								case "engine arguments":
+									engineArguments = uci.GetValue("value");
+									break;
+								case "teacher file":
+									SetTeacherFile(uci.GetValue("value"));
+									break;
+								case "write":
+									isW = uci.GetValue("value")=="true";
+									break;
+								case "log":
+									isLog = uci.GetValue("value")=="true";
+									break;
+								case "limit add":
+									bookLimitAdd = uci.GetInt("value");
+									break;
+								case "limit read":
+									bookLimitR = uci.GetInt("value");
+									break;
+								case "limit write":
+									bookLimitW = uci.GetInt("value");
+									break;
+								case "Random":
+									bookRandom = uci.GetInt("value");
+									break;
+							}
 							break;
 						default:
 							Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
@@ -267,13 +307,16 @@ namespace NSProgram
 					continue;
 				}
 
-				if ((uci.command != "go") && (engineProcess != null))
+				if ((uci.First() == "uci") && (engineProcess == null))
+					SetEngineFile(engineFile);
+				if ((uci.First() != "go") && (engineProcess != null))
 					engineProcess.StandardInput.WriteLine(msg);
-				switch (uci.command)
+
+				switch (uci.First())
 				{
 					case "position":
 						lastFen = uci.GetValue("fen", "moves");
-						lastMoves = uci.GetValue("moves", "fen");
+						lastMoves = uci.GetValue("moves");
 						book.chess.SetFen(lastFen);
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
@@ -389,8 +432,43 @@ namespace NSProgram
 						book.SaveToFile();
 					}
 				}
-			} while (uci.command != "quit");
+			} while (uci.First() != "quit");
 			teacher.TeacherTerminate();
+
+			bool SetEngineFile(string ef)
+			{
+				engineFile = ef;
+				engineProcess = null;
+				if (File.Exists(engineFile))
+				{
+					engineProcess = new Process();
+					engineProcess.StartInfo.FileName = engineFile;
+					engineProcess.StartInfo.WorkingDirectory = Path.GetDirectoryName(engineFile);
+					engineProcess.StartInfo.UseShellExecute = false;
+					engineProcess.StartInfo.RedirectStandardInput = true;
+					engineProcess.StartInfo.Arguments = engineArguments;
+					engineProcess.Start();
+					return true;
+				}
+				return false;
+			}
+
+			bool SetTeacherFile(string tf)
+			{
+				teacherFile = tf;
+				return teacher.SetTeacherFile(teacherFile);
+			}
+
+			bool SetBookFile(string bf)
+			{
+				bookFile = bf;
+				string ext = Path.GetExtension(bookFile);
+				if (String.IsNullOrEmpty(ext))
+					bookFile = $"{bookFile}{CBook.defExt}";
+				bookLoaded = book.LoadFromFile(bookFile);
+				return bookLoaded;
+			}
+
 		}
 	}
 }

@@ -722,7 +722,7 @@ namespace NSChess
 		{
 			if (start)
 				SetFen();
-			return MakeMoves(CUci.Split(moves));
+			return MakeMoves(moves.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
 		}
 
 		public bool IsValidMove(int emo)
