@@ -202,7 +202,7 @@ namespace NSProgram
 				}
 				uci.SetMsg(msg);
 				int count = book.recList.Count;
-				if (uci.First() == "book")
+				if (uci.command == "book")
 				{
 					switch (uci.tokens[1])
 					{
@@ -307,12 +307,12 @@ namespace NSProgram
 					continue;
 				}
 
-				if ((uci.First() == "uci") && (engineProcess == null))
+				if ((uci.command == "uci") && (engineProcess == null))
 					SetEngineFile(engineFile);
-				if ((uci.First() != "go") && (engineProcess != null))
+				if ((uci.command != "go") && (engineProcess != null))
 					engineProcess.StandardInput.WriteLine(msg);
 
-				switch (uci.First())
+				switch (uci.command)
 				{
 					case "position":
 						lastFen = uci.GetValue("fen", "moves");
@@ -432,7 +432,7 @@ namespace NSProgram
 						book.SaveToFile();
 					}
 				}
-			} while (uci.First() != "quit");
+			} while (uci.command != "quit");
 			teacher.TeacherTerminate();
 
 			bool SetEngineFile(string ef)

@@ -62,7 +62,7 @@ namespace NSProgram
 				if (!String.IsNullOrEmpty(e.Data))
 				{
 					uci.SetMsg(e.Data);
-					if (uci.First() == "bestmove")
+					if (uci.command == "bestmove")
 					{
 						CTData td = GetTData();
 						uci.GetValue("bestmove", out td.best);
