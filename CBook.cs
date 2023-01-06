@@ -9,12 +9,10 @@ namespace NSProgram
 
 	class CBook
 	{
-		public string path = String.Empty;
 		public int errors = 0;
 		public int maxRecords = 0;
-		public string fileShortName = String.Empty;
-		string fileDirectory = String.Empty;
 		public const string defExt = ".est";
+		public string path = string.Empty;
 		public CChessExt chess = new CChessExt();
 		readonly int[] arrAge = new int[0x100];
 		readonly CHeader header = new CHeader();
@@ -43,7 +41,7 @@ namespace NSProgram
 				using (FileStream fs = File.Open(pt, FileMode.Create, FileAccess.Write, FileShare.None))
 				using (buffer.Bw = new BinaryWriter(fs))
 				{
-					string lastTnt = new string('-',64);
+					string lastTnt = new string('-', 64);
 					buffer.Write(header.GetHeader());
 					foreach (CRec rec in recList)
 					{
@@ -57,18 +55,14 @@ namespace NSProgram
 							rec.age++;
 						ulong zip = (ulong)lastTnt.Zip(rec.tnt, (c1, c2) => c1 == c2).TakeWhile(b => b).Count();
 						buffer.Write(zip, 6);
-						for(int n=(int)zip;n<64;n++)
+						for (int n = (int)zip; n < 64; n++)
 						{
 							ulong ul = (ulong)TntToInt(rec.tnt[n]);
 							if (ul == 0)
 								buffer.Write(1, 1);
 							else
-								buffer.Write(ul,5);
+								buffer.Write(ul, 5);
 						}
-						/*TntToMac(rec.tnt, out ulong m, out byte[] a, out byte c);
-						buffer.Write(m);
-						for (int n = 0; n < c; n++)
-							buffer.Write(a[n], 4);*/
 						buffer.Write(rec.score);
 						buffer.Write(rec.age);
 						buffer.Write(rec.depth);
@@ -107,6 +101,7 @@ namespace NSProgram
 
 		bool AddFileTnt(string p)
 		{
+			path = p;
 			string pt = p + ".tmp";
 			try
 			{
@@ -135,16 +130,12 @@ namespace NSProgram
 						{
 							ulong zip = buffer.Read(6);
 							byte[] a = new byte[64];
-							string tnt = lastTnt.Substring(0,(int)zip);
+							string tnt = lastTnt.Substring(0, (int)zip);
 							for (int n = (int)zip; n < 64; n++)
 								if (buffer.Read(1) == 0)
 									tnt += IntToTnt((int)buffer.Read(4));
 								else
 									tnt += '-';
-							/*ulong m = buffer.ReadUInt64();
-							int bc = BitCount(m);
-							for (int n = 0; n < bc; n++)
-								a[n] = (byte)buffer.Read(4);*/
 							CRec rec = new CRec
 							{
 								tnt = tnt,
@@ -211,7 +202,7 @@ namespace NSProgram
 
 		public void ShowMoves(bool last = false)
 		{
-			Console.Write($"\r{recList.Count} moves ");
+			Console.Write($"\r{recList.Count} moves");
 			if (last)
 			{
 				Console.WriteLine();
@@ -246,16 +237,6 @@ namespace NSProgram
 			recList.Clear();
 		}
 
-		string GetBookFile()
-		{
-			return $"{fileShortName}{defExt}";
-		}
-
-		string GetBookPath()
-		{
-			return $@"{fileDirectory}{GetBookFile()}";
-		}
-
 		public string GetShallow()
 		{
 			string result = String.Empty;
@@ -277,15 +258,7 @@ namespace NSProgram
 		public bool LoadFromFile(string p)
 		{
 			if (String.IsNullOrEmpty(p))
-				if (String.IsNullOrEmpty(path))
-					return false;
-				else
-					p = path;
-			path = p;
-			fileDirectory = Path.GetDirectoryName(p);
-			if (fileDirectory != String.Empty)
-				fileDirectory = $@"{fileDirectory}\";
-			fileShortName = Path.GetFileNameWithoutExtension(p);
+				return false;
 			recList.Clear();
 			return AddFile(p);
 		}
@@ -298,8 +271,6 @@ namespace NSProgram
 		public bool AddFile(string p)
 		{
 			bool result = true;
-			if (String.IsNullOrEmpty(fileShortName))
-				fileShortName = Path.GetFileNameWithoutExtension(p);
 			string ext = Path.GetExtension(p).ToLower();
 			if (ext == defExt)
 				result = AddFileTnt(p);
@@ -507,7 +478,8 @@ namespace NSProgram
 
 		public void SaveToFile()
 		{
-			SaveToFile(GetBookPath());
+			if (!string.IsNullOrEmpty(path))
+				SaveToFile(path);
 		}
 
 		public bool SaveToUci(string p)

@@ -1,10 +1,10 @@
 ﻿using NSUci;
+using RapIni;
+using RapLog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using RapIni;
-using RapLog;
 
 namespace NSProgram
 {
@@ -148,29 +148,14 @@ namespace NSProgram
 			}
 			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
 			bool bookLoaded = SetBookFile(bookFile);
-			if (bookLoaded)
-			{
-				if (book.recList.Count > 0)
-				{
-					FileInfo fi = new FileInfo(book.path);
-					long bpm = (fi.Length << 3) / book.recList.Count;
-					Console.WriteLine($"info string book on {book.recList.Count:N0} moves {bpm} bpm");
-				}
-				if (isW)
-					Console.WriteLine($"info string write on");
-			}
-			else
-				isW = false;
 			Process engineProcess;
 			if (SetEngineFile(engineFile))
 				Console.WriteLine($"info string engine on");
-			else
-				if (engineFile != string.Empty)
+			else if (engineFile != string.Empty)
 				Console.WriteLine($"info string missing file [{engineFile}]");
-			if (SetTeacherFile(teacherFile))
+			if (teacher.SetTeacherFile(teacherFile))
 				Console.WriteLine($"info string teacher on");
-			else
-				if (teacherFile != string.Empty)
+			else if (teacherFile != string.Empty)
 				Console.WriteLine($"info string missing file [{teacherFile}]");
 
 			if (bookLoaded && teacher.enabled)
@@ -180,8 +165,6 @@ namespace NSProgram
 			}
 			if (isW)
 				bookRandom = 0;
-			if (isInfo)
-				book.InfoMoves();
 			do
 			{
 				string msg = Console.ReadLine().Trim();
@@ -254,9 +237,6 @@ namespace NSProgram
 							break;
 						case "getoption":
 							Console.WriteLine($"option name Book file type string default book{CBook.defExt}");
-							Console.WriteLine($"option name Engine file type string default");
-							Console.WriteLine($"option name Engine arguments type string default");
-							Console.WriteLine($"option name Teacher file type string default");
 							Console.WriteLine($"option name Write type check default false");
 							Console.WriteLine($"option name Log type check default false");
 							Console.WriteLine($"option name Limit add moves type spin default {bookLimitAdd} min 0 max 100");
@@ -271,20 +251,11 @@ namespace NSProgram
 								case "book file":
 									SetBookFile(uci.GetValue("value"));
 									break;
-								case "engine file":
-									engineFile = uci.GetValue("value");
-									break;
-								case "engine arguments":
-									engineArguments = uci.GetValue("value");
-									break;
-								case "teacher file":
-									SetTeacherFile(uci.GetValue("value"));
-									break;
 								case "write":
-									isW = uci.GetValue("value")=="true";
+									isW = uci.GetValue("value") == "true";
 									break;
 								case "log":
-									isLog = uci.GetValue("value")=="true";
+									isLog = uci.GetValue("value") == "true";
 									break;
 								case "limit add":
 									bookLimitAdd = uci.GetInt("value");
@@ -306,9 +277,6 @@ namespace NSProgram
 					}
 					continue;
 				}
-
-				if ((uci.command == "uci") && (engineProcess == null))
-					SetEngineFile(engineFile);
 				if ((uci.command != "go") && (engineProcess != null))
 					engineProcess.StandardInput.WriteLine(msg);
 
@@ -453,19 +421,25 @@ namespace NSProgram
 				return false;
 			}
 
-			bool SetTeacherFile(string tf)
+			bool SetBookFile(string bn)
 			{
-				teacherFile = tf;
-				return teacher.SetTeacherFile(teacherFile);
-			}
-
-			bool SetBookFile(string bf)
-			{
-				bookFile = bf;
-				string ext = Path.GetExtension(bookFile);
-				if (String.IsNullOrEmpty(ext))
-					bookFile = $"{bookFile}{CBook.defExt}";
+				bookFile = bn;
 				bookLoaded = book.LoadFromFile(bookFile);
+				if (bookLoaded)
+				{
+					if ((book.recList.Count > 0) && File.Exists(book.path))
+					{
+						FileInfo fi = new FileInfo(book.path);
+						long bpm = (fi.Length << 3) / book.recList.Count;
+						Console.WriteLine($"info string book on {book.recList.Count:N0} moves {bpm} bpm");
+					}
+					if (isW)
+						Console.WriteLine($"info string write on");
+					if (isInfo)
+						book.InfoMoves();
+				}
+				else
+					isW = false;
 				return bookLoaded;
 			}
 
