@@ -684,6 +684,11 @@ namespace NSProgram
 			}
 		}
 
+		public void ShowInfo()
+		{
+			InfoMoves();
+		}
+
 		List<string> GetGames()
 		{
 			List<string> sl = new List<string>();

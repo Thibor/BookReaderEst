@@ -436,7 +436,7 @@ namespace NSProgram
 					if (isW)
 						Console.WriteLine($"info string write on");
 					if (isInfo)
-						book.InfoMoves();
+						book.ShowInfo();
 				}
 				else
 					isW = false;
