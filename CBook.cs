@@ -485,10 +485,10 @@ namespace NSProgram
 		public bool SaveToUci(string p)
 		{
 			List<string> sl = GetGames();
-			FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None);
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
 			using (StreamWriter sw = new StreamWriter(fs))
 			{
-				foreach (String uci in sl)
+				foreach (string uci in sl)
 					sw.WriteLine(uci);
 			}
 			return true;
@@ -498,7 +498,7 @@ namespace NSProgram
 		{
 			List<string> sl = GetGames();
 			int line = 0;
-			FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None);
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
 			using (StreamWriter sw = new StreamWriter(fs))
 			{
 				foreach (String uci in sl)
@@ -692,18 +692,42 @@ namespace NSProgram
 		List<string> GetGames()
 		{
 			List<string> sl = new List<string>();
-			if (branchList.Start())
-				do
-				{
-					string uci = branchList.GetUci();
-					sl.Add(uci);
-					Console.Write($"\rsearch {branchList.GetProcent():N4}%");
-				} while (branchList.BlNext());
-			double pro = (branchList.used * 100.0) / recList.Count;
+			GetGames(string.Empty, 0, 0, 0, 1, ref sl);
 			Console.WriteLine();
-			Console.WriteLine($"games {sl.Count:N0} used {branchList.used:N0} ({pro:N2}%)");
+			Console.WriteLine("finish");
+			Console.Beep();
 			sl.Sort();
 			return sl;
+		}
+
+		void GetGames(string moves, int ply, int back, double proT, double proU, ref List<string> list)
+		{
+			bool add = true;
+			if ((back < 2) && (ply < 8))
+			{
+				chess.SetFen();
+				chess.MakeMoves(moves);
+				CEmoList el = GetEmoList();
+				if (el.Count > 0)
+				{
+					proU /= el.Count;
+					bool wt = chess.whiteTurn;
+					for (int n = 0; n < el.Count; n++)
+					{
+						CEmo emo = el[n];
+						add = false;
+						int curBack = chess.MoveBack(emo.emo, wt) ? 1 : 0;
+						double p = proT + n * proU;
+						GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, back + curBack, p, proU, ref list);
+					}
+				}
+			}
+			if (add)
+			{
+				list.Add(moves);
+				double pro = (proT + proU) * 100.0;
+				Console.Write($"\r{pro:N4} %");
+			}
 		}
 
 		public void Update()

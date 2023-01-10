@@ -1,10 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using NSChess;
 
 namespace NSProgram
 {
 	class CChessExt : CChess
 	{
+
+		public bool MoveBack(int emo, bool wt)
+		{
+			int s = emo & 0xff;
+			int d = (emo >> 8) & 0xff;
+			int sx = s % 8;
+			int dx = d % 8;
+			int sy = s / 8;
+			int dy = d / 8;
+			if (wt)
+				(sy, dy) = (dy, sy);
+			if (dy < sy)
+				return true;
+			if (dy > sy)
+				return false;
+			return Math.Abs(sx - 3.5) <= Math.Abs(dx - 3.5);
+		}
+
 		public bool Is2ToEnd(out string myMov, out string enMov)
 		{
 			myMov = "";

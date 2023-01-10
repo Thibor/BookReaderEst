@@ -147,7 +147,6 @@ namespace NSProgram
 				teacherFile = ini.Read("teacher>file");
 			}
 			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
-			bool bookLoaded = SetBookFile(bookFile);
 			Process engineProcess;
 			if (SetEngineFile(engineFile))
 				Console.WriteLine($"info string engine on");
@@ -157,14 +156,7 @@ namespace NSProgram
 				Console.WriteLine($"info string teacher on");
 			else if (teacherFile != string.Empty)
 				Console.WriteLine($"info string missing file [{teacherFile}]");
-
-			if (bookLoaded && teacher.enabled)
-			{
-				isW = true;
-				bookLimitR = 0;
-			}
-			if (isW)
-				bookRandom = 0;
+			bool bookLoaded = SetBookFile(bookFile);
 			do
 			{
 				string msg = Console.ReadLine().Trim();
@@ -243,13 +235,13 @@ namespace NSProgram
 							Console.WriteLine($"option name Limit read moves type spin default {bookLimitR} min 0 max 100");
 							Console.WriteLine($"option name Limit write moves type spin default {bookLimitW} min 0 max 100");
 							Console.WriteLine($"option name Random moves type spin default {bookRandom} min 0 max 201");
-							Console.WriteLine("optionok");
+							Console.WriteLine("optionend");
 							break;
 						case "setoption":
 							switch (uci.GetValue("name", "value").ToLower())
 							{
 								case "book file":
-									SetBookFile(uci.GetValue("value"));
+									bookFile = uci.GetValue("value");
 									break;
 								case "write":
 									isW = uci.GetValue("value") == "true";
@@ -271,6 +263,9 @@ namespace NSProgram
 									break;
 							}
 							break;
+						case "optionend":
+							SetBookFile(bookFile);
+							break;
 						default:
 							Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
 							break;
@@ -284,7 +279,7 @@ namespace NSProgram
 				{
 					case "position":
 						lastFen = uci.GetValue("fen", "moves");
-						lastMoves = uci.GetValue("moves");
+						lastMoves = uci.GetValue("moves","fen");
 						book.chess.SetFen(lastFen);
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
@@ -438,8 +433,13 @@ namespace NSProgram
 					if (isInfo)
 						book.ShowInfo();
 				}
-				else
-					isW = false;
+				if (teacher.enabled)
+					isW = true;
+				if (isW)
+				{
+					bookLimitR = 0;
+					bookRandom = 0;
+				}
 				return bookLoaded;
 			}
 
