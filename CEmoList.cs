@@ -67,12 +67,6 @@ namespace NSProgram
 			return this[CChess.random.Next(i1, i2)];
 		}
 
-		public void SetUsed(bool used = true)
-		{
-			foreach (CEmo e in this)
-				e.rec.used = used;
-		}
-
 		public void Shuffle()
 		{
 			int n = Count;

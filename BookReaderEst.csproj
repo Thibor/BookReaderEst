@@ -44,7 +44,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CBranchList.cs" />
     <Compile Include="CBuffer.cs" />
     <Compile Include="CChess.cs" />
     <Compile Include="CBook.cs" />

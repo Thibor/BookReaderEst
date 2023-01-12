@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -17,8 +18,8 @@ namespace NSProgram
 		readonly int[] arrAge = new int[0x100];
 		readonly CHeader header = new CHeader();
 		public CRecList recList = new CRecList();
-		public CBranchList branchList = new CBranchList();
 		readonly CBuffer buffer = new CBuffer();
+		Stopwatch stopWatch = new Stopwatch();
 
 		#region file est
 
@@ -241,8 +242,7 @@ namespace NSProgram
 		{
 			string result = String.Empty;
 			chess.SetFen();
-			recList.SetUsed(false);
-			CEmoList el = GetEmoList(true);
+			CEmoList el = GetEmoList();
 			while (el.Count > 0)
 			{
 				el.SortFlat();
@@ -250,22 +250,27 @@ namespace NSProgram
 				chess.MakeMove(emo.emo);
 				string umo = chess.EmoToUmo(emo.emo);
 				result += $" {umo}";
-				el = GetEmoList(true);
+				el = GetEmoList(emo.rec.score);
 			}
 			return result.Trim();
-		}
-
-		public bool LoadFromFile(string p)
-		{
-			if (String.IsNullOrEmpty(p))
-				return false;
-			recList.Clear();
-			return AddFile(p);
 		}
 
 		public bool LoadFromFile()
 		{
 			return LoadFromFile(path);
+		}
+
+		public bool LoadFromFile(string p)
+		{
+			stopWatch.Restart();
+			if (String.IsNullOrEmpty(p))
+				return false;
+			recList.Clear();
+			bool result = AddFile(p);
+			stopWatch.Stop();
+			TimeSpan ts = stopWatch.Elapsed;
+			Console.WriteLine($"info string Loaded in {ts.Seconds}.{ts.Milliseconds} seconds");
+			return result;
 		}
 
 		public bool AddFile(string p)
@@ -462,75 +467,6 @@ namespace NSProgram
 				arrAge[rec.age]++;
 		}
 
-		public bool SaveToFile(string p)
-		{
-			string ext = Path.GetExtension(p).ToLower();
-			if (ext == defExt)
-				return SaveToEst(p);
-			if (ext == ".uci")
-				return SaveToUci(p);
-			if (ext == ".pgn")
-				return SaveToPgn(p);
-			if (ext == ".txt")
-				return SaveToTxt(p);
-			return false;
-		}
-
-		public void SaveToFile()
-		{
-			if (!string.IsNullOrEmpty(path))
-				SaveToFile(path);
-		}
-
-		public bool SaveToUci(string p)
-		{
-			List<string> sl = GetGames();
-			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
-			using (StreamWriter sw = new StreamWriter(fs))
-			{
-				foreach (string uci in sl)
-					sw.WriteLine(uci);
-			}
-			return true;
-		}
-
-		public bool SaveToPgn(string p)
-		{
-			List<string> sl = GetGames();
-			int line = 0;
-			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
-			using (StreamWriter sw = new StreamWriter(fs))
-			{
-				foreach (String uci in sl)
-				{
-					string[] arrMoves = uci.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-					chess.SetFen();
-					string pgn = String.Empty;
-					foreach (string umo in arrMoves)
-					{
-						string san = chess.UmoToSan(umo);
-						if (san == String.Empty)
-							break;
-						int number = (chess.halfMove >> 1) + 1;
-						if (chess.whiteTurn)
-							pgn += $" {number}. {san}";
-						else
-							pgn += $" {san}";
-						int emo = chess.UmoToEmo(umo);
-						chess.MakeMove(emo);
-					}
-					sw.WriteLine();
-					sw.WriteLine("[White \"White\"]");
-					sw.WriteLine("[Black \"Black\"]");
-					sw.WriteLine();
-					sw.WriteLine(pgn.Trim());
-					Console.Write($"\rgames {++line}");
-				}
-			}
-			Console.WriteLine();
-			return true;
-		}
-
 		int GetMaxAge()
 		{
 			int max = AgeMax();
@@ -574,7 +510,7 @@ namespace NSProgram
 			return el;
 		}
 
-		public CEmoList GetEmoList(bool onlyNotUsed = false, int repetytion = -1)
+		public CEmoList GetEmoList(short score = 0, int repetytion = -1)
 		{
 			CEmoList emoList = new CEmoList();
 			List<int> moves = chess.GenerateValidMoves(out _, repetytion);
@@ -584,10 +520,8 @@ namespace NSProgram
 				string tnt = chess.GetTnt();
 				CRec rec = recList.GetRec(tnt);
 				if (rec != null)
-					if (!onlyNotUsed || !rec.used)
+					if (Math.Abs(rec.score) >= score)
 					{
-						if (onlyNotUsed)
-							rec.used = true;
 						CEmo emo = new CEmo(m, rec);
 						emoList.Add(emo);
 					}
@@ -689,47 +623,6 @@ namespace NSProgram
 			InfoMoves();
 		}
 
-		List<string> GetGames()
-		{
-			List<string> sl = new List<string>();
-			GetGames(string.Empty, 0, 0, 0, 1, ref sl);
-			Console.WriteLine();
-			Console.WriteLine("finish");
-			Console.Beep();
-			sl.Sort();
-			return sl;
-		}
-
-		void GetGames(string moves, int ply, int back, double proT, double proU, ref List<string> list)
-		{
-			bool add = true;
-			if ((back < 2) && (ply < 8))
-			{
-				chess.SetFen();
-				chess.MakeMoves(moves);
-				CEmoList el = GetEmoList();
-				if (el.Count > 0)
-				{
-					proU /= el.Count;
-					bool wt = chess.whiteTurn;
-					for (int n = 0; n < el.Count; n++)
-					{
-						CEmo emo = el[n];
-						add = false;
-						int curBack = chess.MoveBack(emo.emo, wt) ? 1 : 0;
-						double p = proT + n * proU;
-						GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, back + curBack, p, proU, ref list);
-					}
-				}
-			}
-			if (add)
-			{
-				list.Add(moves);
-				double pro = (proT + proU) * 100.0;
-				Console.Write($"\r{pro:N4} %");
-			}
-		}
-
 		public void Update()
 		{
 			Program.added = 0;
@@ -758,6 +651,122 @@ namespace NSProgram
 			} while ((max > up) && (up > 0));
 			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
 		}
+
+		#region save
+
+		public bool SaveToFile(string p)
+		{
+			string ext = Path.GetExtension(p).ToLower();
+			if (ext == defExt)
+				return SaveToEst(p);
+			if (ext == ".uci")
+				return SaveToUci(p);
+			if (ext == ".pgn")
+				return SaveToPgn(p);
+			if (ext == ".txt")
+				return SaveToTxt(p);
+			return false;
+		}
+
+		public void SaveToFile()
+		{
+			if (!string.IsNullOrEmpty(path))
+				SaveToFile(path);
+		}
+
+		public bool SaveToUci(string p)
+		{
+			List<string> sl = GetGames();
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
+			using (StreamWriter sw = new StreamWriter(fs))
+			{
+				foreach (string uci in sl)
+					sw.WriteLine(uci);
+			}
+			return true;
+		}
+
+		public bool SaveToPgn(string p)
+		{
+			List<string> sl = GetGames();
+			int line = 0;
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
+			using (StreamWriter sw = new StreamWriter(fs))
+			{
+				foreach (String uci in sl)
+				{
+					string[] arrMoves = uci.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+					chess.SetFen();
+					string pgn = String.Empty;
+					foreach (string umo in arrMoves)
+					{
+						string san = chess.UmoToSan(umo);
+						if (san == String.Empty)
+							break;
+						int number = (chess.halfMove >> 1) + 1;
+						if (chess.whiteTurn)
+							pgn += $" {number}. {san}";
+						else
+							pgn += $" {san}";
+						int emo = chess.UmoToEmo(umo);
+						chess.MakeMove(emo);
+					}
+					sw.WriteLine();
+					sw.WriteLine("[White \"White\"]");
+					sw.WriteLine("[Black \"Black\"]");
+					sw.WriteLine();
+					sw.WriteLine(pgn.Trim());
+					Console.Write($"\rgames {++line}");
+				}
+			}
+			Console.WriteLine();
+			return true;
+		}
+
+		List<string> GetGames()
+		{
+			List<string> sl = new List<string>();
+			GetGames(string.Empty, 0, 0, 0, 1, ref sl);
+			Console.WriteLine();
+			Console.WriteLine("finish");
+			Console.Beep();
+			sl.Sort();
+			return sl;
+		}
+
+		void GetGames(string moves, int ply, short score, double proT, double proU, ref List<string> list)
+		{
+			bool add = true;
+			if (ply < 12)
+			{
+				chess.SetFen();
+				chess.MakeMoves(moves);
+				CEmoList el = GetEmoList();
+				if (el.Count > 0)
+				{
+					proU /= el.Count;
+					for (int n = 0; n < el.Count; n++)
+					{
+						CEmo emo = el[n];
+						short curScore = Math.Abs(emo.rec.score);
+						double p = proT + n * proU;
+						if (curScore >= score)
+						{
+							add = false;
+							GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, curScore, p, proU, ref list);
+						}
+					}
+				}
+			}
+			if (add)
+			{
+				list.Add(moves);
+				double pro = (proT + proU) * 100.0;
+				Console.Write($"\r{pro:N4} %");
+			}
+		}
+
+		#endregion
 
 	}
 }

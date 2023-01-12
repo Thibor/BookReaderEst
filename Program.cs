@@ -213,7 +213,16 @@ namespace NSProgram
 							book.ShowMoves(true);
 							break;
 						case "moves":
-							book.InfoMoves(uci.GetValue("moves"));
+							string moves = uci.GetValue("moves");
+							if (moves == "shallow")
+							{
+								moves = book.GetShallow();
+								Console.WriteLine(moves);
+								int i = moves.LastIndexOf(' ');
+								if (i > 0)
+									moves = moves.Substring(0, i);
+							}
+							book.InfoMoves(moves);
 							break;
 						case "structure":
 							book.InfoStructure();
@@ -279,7 +288,7 @@ namespace NSProgram
 				{
 					case "position":
 						lastFen = uci.GetValue("fen", "moves");
-						lastMoves = uci.GetValue("moves","fen");
+						lastMoves = uci.GetValue("moves", "fen");
 						book.chess.SetFen(lastFen);
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
