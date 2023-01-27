@@ -52,19 +52,19 @@ namespace NSProgram
 			return null;
 		}
 
-		public CEmo GetRnd(int rnd = 0)
+		public CEmo GetRnd(int random = 0)
 		{
 			if (Count == 0)
 				return null;
-			if (rnd < 0)
-				rnd = 0;
+			if (random < 0)
+				random = 0;
 			int i1 = 0;
 			int i2 = Count;
-			if (rnd <= 100)
-				i2 = (Count * rnd) / 100;
+			if (random <= 100)
+				i2 = (Count * random) / 100;
 			else
-				i1 = ((Count - 1) * (rnd - 100)) / 100;
-			return this[CChess.random.Next(i1, i2)];
+				i1 = ((Count - 1) * (random - 100)) / 100;
+			return this[rnd.Next(i1, i2)];
 		}
 
 		public void Shuffle()

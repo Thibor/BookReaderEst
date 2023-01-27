@@ -241,8 +241,8 @@ namespace NSProgram
 							Console.WriteLine($"option name Write type check default false");
 							Console.WriteLine($"option name Log type check default false");
 							Console.WriteLine($"option name Limit add moves type spin default {bookLimitAdd} min 0 max 100");
-							Console.WriteLine($"option name Limit read moves type spin default {bookLimitR} min 0 max 100");
-							Console.WriteLine($"option name Limit write moves type spin default {bookLimitW} min 0 max 100");
+							Console.WriteLine($"option name Limit read ply type spin default {bookLimitR} min 0 max 100");
+							Console.WriteLine($"option name Limit write ply type spin default {bookLimitW} min 0 max 100");
 							Console.WriteLine($"option name Random moves type spin default {bookRandom} min 0 max 201");
 							Console.WriteLine("optionend");
 							break;
@@ -258,13 +258,13 @@ namespace NSProgram
 								case "log":
 									isLog = uci.GetValue("value") == "true";
 									break;
-								case "limit add":
+								case "limit add moves":
 									bookLimitAdd = uci.GetInt("value");
 									break;
-								case "limit read":
+								case "limit read ply":
 									bookLimitR = uci.GetInt("value");
 									break;
-								case "limit write":
+								case "limit write ply":
 									bookLimitW = uci.GetInt("value");
 									break;
 								case "Random":

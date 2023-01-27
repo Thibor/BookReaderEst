@@ -19,7 +19,7 @@ namespace NSProgram
 		readonly CHeader header = new CHeader();
 		public CRecList recList = new CRecList();
 		readonly CBuffer buffer = new CBuffer();
-		Stopwatch stopWatch = new Stopwatch();
+		readonly Stopwatch stopWatch = new Stopwatch();
 
 		#region file est
 
@@ -262,9 +262,9 @@ namespace NSProgram
 
 		public bool LoadFromFile(string p)
 		{
-			stopWatch.Restart();
 			if (String.IsNullOrEmpty(p))
 				return false;
+			stopWatch.Restart();
 			recList.Clear();
 			bool result = AddFile(p);
 			stopWatch.Stop();
@@ -766,7 +766,7 @@ namespace NSProgram
 			}
 		}
 
-		#endregion
+		#endregion save
 
 	}
 }
