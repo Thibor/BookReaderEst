@@ -33,12 +33,13 @@ namespace NSProgram
 		public static int bookLimitR = 8;
 		public static bool isVersion = true;
 		public static CBook book = new CBook();
+		public static CTeacher teacher = new CTeacher();
 		public static CRapIni ini = new CRapIni();
 		public static CRapLog log = new CRapLog();
 
-		public static void LogMsg(string msg, bool con = true)
+		public static void LogMsg(string msg, bool condition = true)
 		{
-			if (isLog && con)
+			if (isLog && condition)
 				log.Add(msg);
 		}
 
@@ -63,7 +64,6 @@ namespace NSProgram
 			string lastFen = String.Empty;
 			string lastMoves = String.Empty;
 			CUci uci = new CUci();
-			CTeacher teacher = new CTeacher();
 			string ax = "-bf";
 			List<string> listBf = new List<string>();
 			List<string> listEf = new List<string>();
@@ -302,6 +302,7 @@ namespace NSProgram
 								added = 0;
 								updated = 0;
 								deleted = 0;
+								teacher.Start();
 							}
 							if (bookLoaded && isW)
 								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
@@ -352,7 +353,7 @@ namespace NSProgram
 						CTData td = teacher.GetTData();
 						if (td.finished)
 						{
-							if (!String.IsNullOrEmpty(td.moves))
+							if (td.moves!=null)
 							{
 								string moves = $"{td.moves} {td.best}";
 								book.AddUci(moves);
@@ -360,9 +361,10 @@ namespace NSProgram
 								book.recList.SortTnt();
 								CRec rec = book.recList.GetRec(tnt);
 								if (rec == null)
-									Program.LogMsg($"wrong moves ({moves})");
+									log.Add($"wrong moves ({moves})");
 								else
 								{
+									teacher.added++;
 									rec.score = td.score;
 									rec.depth = td.depth;
 									book.UpdateBack(moves);

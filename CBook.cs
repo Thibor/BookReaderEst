@@ -96,7 +96,7 @@ namespace NSProgram
 			}
 			double depth = totalDepth / recList.Count;
 			if (Program.isLog && (maxAge > 0))
-				Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
+				Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} teacher {Program.teacher.added} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
 			return true;
 		}
 
@@ -248,9 +248,14 @@ namespace NSProgram
 				el.SortFlat();
 				CEmo emo = el[0];
 				chess.MakeMove(emo.emo);
-				string umo = chess.EmoToUmo(emo.emo);
-				result += $" {umo}";
-				el = GetEmoList(emo.rec.score);
+				if (chess.IsRepetition(0))
+					break;
+				else
+				{
+					string umo = chess.EmoToUmo(emo.emo);
+					result += $" {umo}";
+					el = GetEmoList(emo.rec.score);
+				}
 			}
 			return result.Trim();
 		}
@@ -512,6 +517,7 @@ namespace NSProgram
 
 		public CEmoList GetEmoList(short score = 0, int repetytion = -1)
 		{
+			score = Math.Abs(score);
 			CEmoList emoList = new CEmoList();
 			List<int> moves = chess.GenerateValidMoves(out _, repetytion);
 			foreach (int m in moves)
@@ -734,27 +740,25 @@ namespace NSProgram
 			return sl;
 		}
 
-		void GetGames(string moves, int ply, short score, double proT, double proU, ref List<string> list)
+		bool GetGames(string moves, int ply, short score, double proT, double proU, ref List<string> list)
 		{
 			bool add = true;
 			if (ply < 12)
 			{
 				chess.SetFen();
 				chess.MakeMoves(moves);
-				CEmoList el = GetEmoList();
+				if (chess.IsRepetition(0))
+					return false;
+				CEmoList el = GetEmoList(score);
 				if (el.Count > 0)
 				{
 					proU /= el.Count;
 					for (int n = 0; n < el.Count; n++)
 					{
 						CEmo emo = el[n];
-						short curScore = Math.Abs(emo.rec.score);
 						double p = proT + n * proU;
-						if (curScore >= score)
-						{
+						if (GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, emo.rec.score, p, proU, ref list))
 							add = false;
-							GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, curScore, p, proU, ref list);
-						}
 					}
 				}
 			}
@@ -764,6 +768,7 @@ namespace NSProgram
 				double pro = (proT + proU) * 100.0;
 				Console.Write($"\r{pro:N4} %");
 			}
+			return true;
 		}
 
 		#endregion save

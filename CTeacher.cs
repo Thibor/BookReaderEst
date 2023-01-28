@@ -9,7 +9,7 @@ namespace NSProgram
 	{
 		public bool finished = true;
 		public bool stop = false;
-		public string moves = String.Empty;
+		public string moves = null;
 		public byte depth = 0;
 		public short score = 0;
 		public string best = String.Empty;
@@ -23,12 +23,14 @@ namespace NSProgram
 			score = td.score;
 			best = td.best;
 		}
+
 	}
 
 	internal class CTeacher
 	{
 		public bool enabled = false;
-		public bool stoped = false;
+		public bool stoped = true;
+		public int added = 0;
 		int minDepth = 0xf;
 		public int time = 0;
 		public int games = 0;
@@ -88,13 +90,13 @@ namespace NSProgram
 						int v = Convert.ToInt32(mate);
 						if (v > 0)
 						{
-							v = Constants.CHECKMATE_MAX - (v<<1);
+							v = Constants.CHECKMATE_MAX - (v << 1);
 							if (v <= Constants.CHECKMATE_NEAR)
 								v = Constants.CHECKMATE_NEAR + 1;
 						}
 						if (v < 0)
 						{
-							v = -Constants.CHECKMATE_MAX - (v<<1);
+							v = -Constants.CHECKMATE_MAX - (v << 1);
 							if (v >= -Constants.CHECKMATE_NEAR)
 								v = -Constants.CHECKMATE_NEAR - 1;
 						}
@@ -146,6 +148,13 @@ namespace NSProgram
 			TeacherWriteLine($"go depth {depth}");
 		}
 
+		public void Start()
+		{
+			CTData td = new CTData();
+			SetTData(td);
+			stoped = !enabled;
+		}
+
 		public void Stop()
 		{
 			stoped = true;
@@ -173,7 +182,7 @@ namespace NSProgram
 				TeacherWriteLine("isready");
 				TeacherWriteLine("ucinewgame");
 				enabled = true;
-				stoped = false;
+				stoped = true;
 				games = 0;
 			}
 			return enabled;
