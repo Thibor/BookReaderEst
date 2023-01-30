@@ -7,20 +7,20 @@ namespace NSProgram
 {
 	class CTData
 	{
-		public bool finished = true;
-		public bool stop = false;
-		public string moves = null;
+		public bool empty = true;
+		public bool finished = false;
 		public byte depth = 0;
 		public short score = 0;
-		public string best = String.Empty;
+		public string moves = string.Empty;
+		public string best = string.Empty;
 
 		public void Assign(CTData td)
 		{
+			empty = td.empty;
 			finished = td.finished;
-			stop = td.stop;
-			moves = td.moves;
 			depth = td.depth;
 			score = td.score;
+			moves = td.moves;
 			best = td.best;
 		}
 
@@ -70,6 +70,7 @@ namespace NSProgram
 						uci.GetValue("bestmove", out td.best);
 						td.finished = true;
 						SetTData(td);
+						Console.WriteLine($"info string teacher move {td.best}");
 						return;
 					}
 					if (uci.GetValue("cp", out string value))
@@ -117,18 +118,22 @@ namespace NSProgram
 
 		public void TeacherTerminate()
 		{
-			enabled = false;
 			if (teacherProcess != null)
 			{
 				teacherProcess.OutputDataReceived -= OnDataReceived;
 				teacherProcess.Kill();
 				teacherProcess = null;
 			}
+			enabled = false;
+			CTData td = new CTData();
+			SetTData(td);
 		}
 
 		public void Start(string moves, int depth)
 		{
+			Console.WriteLine($"info string teacher moves {moves.Split().Length} depth {depth}");
 			time = 0;
+			depth++;
 			games++;
 			if (stoped || String.IsNullOrEmpty(moves) || (depth > 0xff))
 				return;
@@ -138,25 +143,14 @@ namespace NSProgram
 				minDepth--;
 			if (depth < minDepth)
 				depth = minDepth;
-			CTData td = new CTData
-			{
-				finished = false,
-				moves = moves,
-				depth = (byte)depth
-			};
+			CTData td = new CTData();
+			td.empty = false;
+			td.moves = moves;
+			td.depth = (byte)depth;
 			SetTData(td);
 			TeacherWriteLine($"position startpos moves {moves}");
 			TeacherWriteLine($"go depth {depth}");
 		}
-
-		public void Start()
-		{
-			CTData td = new CTData();
-			SetTData(td);
-			stoped = !enabled;
-			TeacherWriteLine("ucinewgame");
-		}
-
 		public void Stop()
 		{
 			stoped = true;
@@ -181,10 +175,11 @@ namespace NSProgram
 				teacherProcess.BeginOutputReadLine();
 				teacherProcess.PriorityClass = ProcessPriorityClass.Idle;
 				TeacherWriteLine("uci");
+				TeacherWriteLine("ucinewgame");
 				enabled = true;
-				stoped = true;
 				games = 0;
 			}
+			stoped = !enabled;
 			return enabled;
 		}
 

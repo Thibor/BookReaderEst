@@ -238,8 +238,9 @@ namespace NSProgram
 			recList.Clear();
 		}
 
-		public string GetShallow()
+		public string GetShallow(out int depth)
 		{
+			depth = int.MaxValue;
 			string result = String.Empty;
 			chess.SetFen();
 			CEmoList el = GetEmoList();
@@ -252,11 +253,15 @@ namespace NSProgram
 					break;
 				else
 				{
+					if (depth > emo.rec.depth)
+						depth = emo.rec.depth;
 					string umo = chess.EmoToUmo(emo.emo);
 					result += $" {umo}";
 					el = GetEmoList(emo.rec.score);
 				}
 			}
+			if (result == String.Empty)
+				depth = 0;
 			return result.Trim();
 		}
 
@@ -526,7 +531,7 @@ namespace NSProgram
 				string tnt = chess.GetTnt();
 				CRec rec = recList.GetRec(tnt);
 				if (rec != null)
-					if (Math.Abs(rec.score) >= score)
+					if ((Math.Abs(rec.score) >= score) || (chess.move50 == 0))
 					{
 						CEmo emo = new CEmo(m, rec);
 						emoList.Add(emo);

@@ -147,7 +147,8 @@ namespace NSProgram
 				Console.WriteLine($"info string engine on");
 			else if (engineFile != string.Empty)
 				Console.WriteLine($"info string missing file [{engineFile}]");
-			if (teacher.SetTeacherFile(teacherFile))
+			bool teacherOn = File.Exists(teacherFile);
+			if (teacherOn)
 				Console.WriteLine($"info string teacher on");
 			else if (teacherFile != string.Empty)
 				Console.WriteLine($"info string missing file [{teacherFile}]");
@@ -211,7 +212,8 @@ namespace NSProgram
 							string moves = uci.GetValue("moves");
 							if (moves == "shallow")
 							{
-								moves = book.GetShallow();
+								moves = book.GetShallow(out _);
+								Console.WriteLine($"moves {moves.Split().Length}");
 								Console.WriteLine(moves);
 								int i = moves.LastIndexOf(' ');
 								if (i > 0)
@@ -288,7 +290,7 @@ namespace NSProgram
 						book.chess.MakeMoves(lastMoves);
 						if (String.IsNullOrEmpty(lastFen))
 						{
-							if (book.chess.halfMove < 2)
+							if ((book.chess.halfMove >> 1) == 0)
 							{
 								bookChanged = false;
 								bookWrite = isW;
@@ -297,8 +299,10 @@ namespace NSProgram
 								added = 0;
 								updated = 0;
 								deleted = 0;
-								teacher.Start();
+								teacher.Stop();
 							}
+							else if ((book.chess.halfMove >> 1) == 1)
+								teacher.SetTeacherFile(teacherFile);
 							if (bookLoaded && isW)
 								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
 								{
@@ -346,50 +350,13 @@ namespace NSProgram
 					{
 						teacher.time++;
 						CTData td = teacher.GetTData();
-						if (td.finished)
+						if (td.empty)
+							BookToTeacher();
+						else if (td.finished)
 						{
-							if (td.moves!=null)
-							{
-								string moves = $"{td.moves} {td.best}";
-								book.AddUci(moves);
-								string tnt = book.chess.GetTnt(moves);
-								book.recList.SortTnt();
-								CRec rec = book.recList.GetRec(tnt);
-								if (rec == null)
-									log.Add($"wrong moves ({moves})");
-								else
-								{
-									rec.score = td.score;
-									rec.depth = td.depth;
-									book.UpdateBack(moves);
-									string[] am = moves.Split();
-									string m = am.Length > 0 ? am[0] : string.Empty;
-									log.Add($"added {++teacher.added} move {m} moves {am.Length} depth {td.depth}");
-								}
-							}
-							td.finished = false;
-							td.moves = book.GetShallow();
+							TeacherToBook(td);
+							td = new CTData();
 							teacher.SetTData(td);
-							if (!String.IsNullOrEmpty(td.moves))
-							{
-								book.UpdateBack(td.moves);
-								book.chess.MakeMoves(td.moves, true);
-								string tnt = book.chess.GetTnt();
-								CRec bst = book.recList.GetRec(tnt);
-								List<int> moves = book.chess.GenerateValidMoves(out bool mate);
-								if (moves.Count == 0)
-								{
-									if (mate)
-										bst.score = (short)(Constants.CHECKMATE_MAX - 1);
-									else
-										bst.score = 0;
-									bst.depth++;
-									book.UpdateBack(td.moves);
-								}
-								else
-									teacher.Start(td.moves, bst.depth + 1);
-							}
-							bookChanged = true;
 						}
 					}
 					if (!bookChanged)
@@ -405,6 +372,53 @@ namespace NSProgram
 				}
 			} while (uci.command != "quit");
 			teacher.TeacherTerminate();
+
+			void BookToTeacher()
+			{
+				string moves = book.GetShallow(out int depth);
+				if (String.IsNullOrEmpty(moves))
+					return;
+				book.UpdateBack(moves);
+				book.chess.MakeMoves(moves, true);
+				string tnt = book.chess.GetTnt();
+				CRec bst = book.recList.GetRec(tnt);
+				List<int> ml = book.chess.GenerateValidMoves(out bool mate);
+				if (ml.Count == 0)
+				{
+					if (mate)
+						bst.score = (short)(Constants.CHECKMATE_MAX - 1);
+					else
+						bst.score = 0;
+					bst.depth++;
+					book.UpdateBack(moves);
+					bookChanged = true;
+				}
+				else
+					teacher.Start(moves, depth);
+			}
+
+			void TeacherToBook(CTData td)
+			{
+				if (string.IsNullOrEmpty(td.best))
+					return;
+				string moves = $"{td.moves} {td.best}";
+				book.AddUci(moves);
+				string tnt = book.chess.GetTnt(moves);
+				book.recList.SortTnt();
+				CRec rec = book.recList.GetRec(tnt);
+				if (rec == null)
+					log.Add($"wrong moves ({moves})");
+				else
+				{
+					rec.score = td.score;
+					rec.depth = td.depth;
+					book.UpdateBack(moves);
+					bookChanged = true;
+					string[] am = moves.Split();
+					string m = am.Length > 0 ? am[0] : string.Empty;
+					log.Add($"added {++teacher.added} move {m} moves {am.Length} depth {td.depth}");
+				}
+			}
 
 			bool SetEngineFile(string ef)
 			{
@@ -441,7 +455,7 @@ namespace NSProgram
 					if (isInfo)
 						book.ShowInfo();
 				}
-				if (teacher.enabled)
+				if (teacherOn)
 					isW = true;
 				if (isW)
 				{
