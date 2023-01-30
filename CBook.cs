@@ -23,6 +23,63 @@ namespace NSProgram
 
 		#region file est
 
+		bool AddFileTnt(string p)
+		{
+			path = p;
+			string pt = p + ".tmp";
+			try
+			{
+				if (!File.Exists(p) && File.Exists(pt))
+					File.Move(pt, p);
+			}
+			catch
+			{
+				return false;
+			}
+			if (!File.Exists(p))
+				return true;
+			try
+			{
+				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
+				using (buffer.Br = new BinaryReader(fs))
+				{
+					string lastTnt = new string('-', 64);
+					string headerBst = header.GetHeader();
+					string headerCur = buffer.ReadString();
+					if (Program.isVersion && (headerCur != headerBst))
+						Console.WriteLine($"This program only supports version  [{headerBst}]");
+					else
+					{
+						while (buffer.Br.BaseStream.Position != buffer.Br.BaseStream.Length)
+						{
+							ulong zip = buffer.Read(6);
+							byte[] a = new byte[64];
+							string tnt = lastTnt.Substring(0, (int)zip);
+							for (int n = (int)zip; n < 64; n++)
+								if (buffer.Read(1) == 0)
+									tnt += IntToTnt((int)buffer.Read(4));
+								else
+									tnt += '-';
+							CRec rec = new CRec
+							{
+								tnt = tnt,
+								score = buffer.ReadInt16(),
+								age = buffer.ReadByte(),
+								depth = buffer.ReadByte()
+							};
+							recList.Add(rec);
+							lastTnt = rec.tnt;
+						}
+					}
+				}
+			}
+			catch
+			{
+				return false;
+			}
+			return true;
+		}
+
 		public bool SaveToEst(string p)
 		{
 			string pt = p + ".tmp";
@@ -100,63 +157,6 @@ namespace NSProgram
 			return true;
 		}
 
-		bool AddFileTnt(string p)
-		{
-			path = p;
-			string pt = p + ".tmp";
-			try
-			{
-				if (!File.Exists(p) && File.Exists(pt))
-					File.Move(pt, p);
-			}
-			catch
-			{
-				return false;
-			}
-			if (!File.Exists(p))
-				return true;
-			try
-			{
-				using (FileStream fs = File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read))
-				using (buffer.Br = new BinaryReader(fs))
-				{
-					string lastTnt = new string('-', 64);
-					string headerBst = header.GetHeader();
-					string headerCur = buffer.ReadString();
-					if (Program.isVersion && (headerCur != headerBst))
-						Console.WriteLine($"This program only supports version  [{headerBst}]");
-					else
-					{
-						while (buffer.Br.BaseStream.Position != buffer.Br.BaseStream.Length)
-						{
-							ulong zip = buffer.Read(6);
-							byte[] a = new byte[64];
-							string tnt = lastTnt.Substring(0, (int)zip);
-							for (int n = (int)zip; n < 64; n++)
-								if (buffer.Read(1) == 0)
-									tnt += IntToTnt((int)buffer.Read(4));
-								else
-									tnt += '-';
-							CRec rec = new CRec
-							{
-								tnt = tnt,
-								score = buffer.ReadInt16(),
-								age = buffer.ReadByte(),
-								depth = buffer.ReadByte()
-							};
-							recList.Add(rec);
-							lastTnt = rec.tnt;
-						}
-					}
-				}
-			}
-			catch
-			{
-				return false;
-			}
-			return true;
-		}
-
 		int TntToInt(char tnt)
 		{
 			return "-aPpNnBbRrQqKkTt".IndexOf(tnt);
@@ -171,14 +171,76 @@ namespace NSProgram
 
 		#region file uci
 
-		void AddFileUci(string p)
+		bool AddFileUci(string p)
 		{
+			if (!File.Exists(p))
+				return true;
 			string[] lines = File.ReadAllLines(p);
 			foreach (string uci in lines)
 				AddUci(uci);
+			return true;
+		}
+
+		public bool SaveToUci(string p)
+		{
+			List<string> sl = GetGames();
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
+			using (StreamWriter sw = new StreamWriter(fs))
+			{
+				foreach (string uci in sl)
+					sw.WriteLine(uci);
+			}
+			Console.WriteLine("finish");
+			Console.Beep();
+			return true;
 		}
 
 		#endregion file uci
+
+		#region file pgn
+
+		public bool SaveToPgn(string p)
+		{
+			List<string> sl = GetGames();
+			int line = 0;
+			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
+			using (StreamWriter sw = new StreamWriter(fs))
+			{
+				foreach (string uci in sl)
+				{
+					string[] arrMoves = uci.Split();
+					chess.SetFen();
+					string pgn = String.Empty;
+					foreach (string umo in arrMoves)
+					{
+						string san = chess.UmoToSan(umo);
+						if (san == String.Empty)
+							break;
+						int number = (chess.halfMove >> 1) + 1;
+						if (chess.whiteTurn)
+							pgn += $"{number}. {san} ";
+						else
+							pgn += $"{san} ";
+						int emo = chess.UmoToEmo(umo);
+						chess.MakeMove(emo);
+					}
+					pgn += "1/2-1/2";
+					sw.WriteLine();
+					sw.WriteLine("[White \"White\"]");
+					sw.WriteLine("[Black \"Black\"]");
+					sw.WriteLine("[Result \"1/2-1/2\"]");
+					sw.WriteLine();
+					sw.WriteLine(pgn.Trim());
+					Console.Write($"\rgames {++line}");
+				}
+			}
+			Console.WriteLine();
+			Console.WriteLine("finish");
+			Console.Beep();
+			return true;
+		}
+
+		#endregion file pgn
 
 		#region file txt
 
@@ -273,7 +335,11 @@ namespace NSProgram
 		public bool LoadFromFile(string p)
 		{
 			if (String.IsNullOrEmpty(p))
-				return false;
+			{
+				if (String.IsNullOrEmpty(path))
+					return false;
+				return LoadFromFile(path);
+			}
 			stopWatch.Restart();
 			recList.Clear();
 			bool result = AddFile(p);
@@ -285,19 +351,20 @@ namespace NSProgram
 
 		public bool AddFile(string p)
 		{
-			bool result = true;
 			string ext = Path.GetExtension(p).ToLower();
 			if (ext == defExt)
-				result = AddFileTnt(p);
+				return AddFileTnt(p);
 			else if (ext == ".uci")
-				AddFileUci(p);
+				return AddFileUci(p);
 			else if (ext == ".pgn")
-				AddFilePgn(p);
-			return result;
+				return AddFilePgn(p);
+			return false;
 		}
 
-		void AddFilePgn(string p)
+		bool AddFilePgn(string p)
 		{
+			if (!File.Exists(p))
+				return true;
 			List<string> listPgn = File.ReadAllLines(p).ToList();
 			string movesUci = String.Empty;
 			chess.SetFen();
@@ -334,6 +401,7 @@ namespace NSProgram
 			}
 			AddUci(movesUci);
 			ShowMoves();
+			return true;
 		}
 
 		public bool AddFen(string fen)
@@ -663,8 +731,6 @@ namespace NSProgram
 			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
 		}
 
-		#region save
-
 		public bool SaveToFile(string p)
 		{
 			string ext = Path.GetExtension(p).ToLower();
@@ -685,62 +751,12 @@ namespace NSProgram
 				SaveToFile(path);
 		}
 
-		public bool SaveToUci(string p)
-		{
-			List<string> sl = GetGames();
-			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
-			using (StreamWriter sw = new StreamWriter(fs))
-			{
-				foreach (string uci in sl)
-					sw.WriteLine(uci);
-			}
-			return true;
-		}
-
-		public bool SaveToPgn(string p)
-		{
-			List<string> sl = GetGames();
-			int line = 0;
-			using (FileStream fs = File.Open(p, FileMode.Create, FileAccess.Write, FileShare.None))
-			using (StreamWriter sw = new StreamWriter(fs))
-			{
-				foreach (String uci in sl)
-				{
-					string[] arrMoves = uci.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-					chess.SetFen();
-					string pgn = String.Empty;
-					foreach (string umo in arrMoves)
-					{
-						string san = chess.UmoToSan(umo);
-						if (san == String.Empty)
-							break;
-						int number = (chess.halfMove >> 1) + 1;
-						if (chess.whiteTurn)
-							pgn += $" {number}. {san}";
-						else
-							pgn += $" {san}";
-						int emo = chess.UmoToEmo(umo);
-						chess.MakeMove(emo);
-					}
-					sw.WriteLine();
-					sw.WriteLine("[White \"White\"]");
-					sw.WriteLine("[Black \"Black\"]");
-					sw.WriteLine();
-					sw.WriteLine(pgn.Trim());
-					Console.Write($"\rgames {++line}");
-				}
-			}
-			Console.WriteLine();
-			return true;
-		}
-
 		List<string> GetGames()
 		{
 			List<string> sl = new List<string>();
 			GetGames(string.Empty, 0, 0, 0, 1, ref sl);
 			Console.WriteLine();
-			Console.WriteLine("finish");
-			Console.Beep();
+			Console.WriteLine($"{sl.Count:N0} games");
 			sl.Sort();
 			return sl;
 		}
@@ -775,8 +791,6 @@ namespace NSProgram
 			}
 			return true;
 		}
-
-		#endregion save
 
 	}
 }

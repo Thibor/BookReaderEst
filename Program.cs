@@ -419,8 +419,8 @@ namespace NSProgram
 					book.UpdateBack(moves);
 					bookChanged = true;
 					string[] am = moves.Split();
-					string m = am.Length > 0 ? am[0] : string.Empty;
-					log.Add($"added {++teacher.added} move {m} moves {am.Length} depth {td.depth}");
+					string mf = am.Length > 0 ? am[0] : string.Empty;
+					log.Add($"added {++teacher.added} first {mf} last {td.best} moves {am.Length} depth {td.depth}");
 				}
 			}
 
