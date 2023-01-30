@@ -10,6 +10,7 @@ namespace NSProgram
 		public bool empty = true;
 		public bool finished = false;
 		public byte depth = 0;
+		public byte lastDepth = 0;
 		public short score = 0;
 		public string moves = string.Empty;
 		public string best = string.Empty;
@@ -19,6 +20,7 @@ namespace NSProgram
 			empty = td.empty;
 			finished = td.finished;
 			depth = td.depth;
+			lastDepth = td.lastDepth;
 			score = td.score;
 			moves = td.moves;
 			best = td.best;
@@ -63,10 +65,16 @@ namespace NSProgram
 			{
 				if (!String.IsNullOrEmpty(e.Data))
 				{
+					CTData td = GetTData();
 					uci.SetMsg(e.Data);
+					int depth = uci.GetInt("depth");
+					if (td.lastDepth < depth)
+					{
+						td.lastDepth = (byte)(depth > 0xff ? 0xff : depth);
+						SetTData(td);
+					}
 					if (uci.command == "bestmove")
 					{
-						CTData td = GetTData();
 						uci.GetValue("bestmove", out td.best);
 						td.finished = true;
 						SetTData(td);
@@ -75,7 +83,6 @@ namespace NSProgram
 					}
 					if (uci.GetValue("cp", out string value))
 					{
-						CTData td = GetTData();
 						int v = Convert.ToInt32(value);
 						if (v > Constants.CHECKMATE_NEAR)
 							v = Constants.CHECKMATE_NEAR;
@@ -87,7 +94,6 @@ namespace NSProgram
 					}
 					if (uci.GetValue("mate", out string mate))
 					{
-						CTData td = GetTData();
 						int v = Convert.ToInt32(mate);
 						if (v > 0)
 						{
@@ -101,6 +107,7 @@ namespace NSProgram
 							if (v >= -Constants.CHECKMATE_NEAR)
 								v = -Constants.CHECKMATE_NEAR - 1;
 						}
+						td.lastDepth = 0xff;
 						td.score = (short)v;
 						SetTData(td);
 						return;
@@ -132,7 +139,6 @@ namespace NSProgram
 		public void Start(string moves, int depth)
 		{
 			Console.WriteLine($"info string teacher moves {moves.Split().Length} depth {depth}");
-			time = 0;
 			depth++;
 			games++;
 			if (stoped || String.IsNullOrEmpty(moves) || (depth > 0xff))
@@ -143,6 +149,7 @@ namespace NSProgram
 				minDepth--;
 			if (depth < minDepth)
 				depth = minDepth;
+			time = 0;
 			CTData td = new CTData();
 			td.empty = false;
 			td.moves = moves;

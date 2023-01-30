@@ -375,7 +375,7 @@ namespace NSProgram
 
 			void BookToTeacher()
 			{
-				string moves = book.GetShallow(out int depth);
+				string moves = book.GetShallow(out _);
 				if (String.IsNullOrEmpty(moves))
 					return;
 				book.UpdateBack(moves);
@@ -386,15 +386,19 @@ namespace NSProgram
 				if (ml.Count == 0)
 				{
 					if (mate)
+					{
+						bst.depth = 0xff;
 						bst.score = (short)(Constants.CHECKMATE_MAX - 1);
+					}
 					else
 						bst.score = 0;
-					bst.depth++;
+					if (bst.depth < 0xff)
+						bst.depth++;
 					book.UpdateBack(moves);
 					bookChanged = true;
 				}
 				else
-					teacher.Start(moves, depth);
+					teacher.Start(moves, bst.depth);
 			}
 
 			void TeacherToBook(CTData td)
@@ -411,7 +415,7 @@ namespace NSProgram
 				else
 				{
 					rec.score = td.score;
-					rec.depth = td.depth;
+					rec.depth = td.lastDepth;
 					book.UpdateBack(moves);
 					bookChanged = true;
 					string[] am = moves.Split();
