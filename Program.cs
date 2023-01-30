@@ -11,11 +11,6 @@ namespace NSProgram
 
 	class Program
 	{
-
-		/// <summary>
-		/// Book can write log file.
-		/// </summary>
-		public static bool isLog = false;
 		public static int added = 0;
 		public static int updated = 0;
 		public static int deleted = 0;
@@ -35,11 +30,11 @@ namespace NSProgram
 		public static CBook book = new CBook();
 		public static CTeacher teacher = new CTeacher();
 		public static CRapIni ini = new CRapIni();
-		public static CRapLog log = new CRapLog();
+		public static CRapLog log = new CRapLog(false);
 
 		public static void LogMsg(string msg, bool condition = true)
 		{
-			if (isLog && condition)
+			if (condition)
 				log.Add(msg);
 		}
 
@@ -86,7 +81,7 @@ namespace NSProgram
 						break;
 					case "-log"://add log
 						ax = ac;
-						isLog = true;
+						log.enabled = true;
 						break;
 					case "-w"://writable
 						ax = ac;
@@ -256,7 +251,7 @@ namespace NSProgram
 									isW = uci.GetValue("value") == "true";
 									break;
 								case "log":
-									isLog = uci.GetValue("value") == "true";
+									log.enabled = uci.GetValue("value") == "true";
 									break;
 								case "limit add moves":
 									bookLimitAdd = uci.GetInt("value");
@@ -322,7 +317,7 @@ namespace NSProgram
 							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
 						if (String.IsNullOrEmpty(move))
 						{
-							if (isLog && (!teacher.enabled) && (emptyTotal == 0))
+							if ((!teacher.enabled) && (emptyTotal == 0))
 								log.Add(lastMoves);
 							emptyRow++;
 							emptyTotal++;
@@ -364,10 +359,12 @@ namespace NSProgram
 									log.Add($"wrong moves ({moves})");
 								else
 								{
-									teacher.added++;
 									rec.score = td.score;
 									rec.depth = td.depth;
 									book.UpdateBack(moves);
+									string[] am = moves.Split();
+									string m = am.Length > 0 ? am[0] : string.Empty;
+									log.Add($"added {++teacher.added} move {m} moves {am.Length} depth {td.depth}");
 								}
 							}
 							td.finished = false;

@@ -95,7 +95,7 @@ namespace NSProgram
 				return false;
 			}
 			double depth = totalDepth / recList.Count;
-			if (Program.isLog && (maxAge > 0))
+			if (maxAge > 0)
 				Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} teacher {Program.teacher.added} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
 			return true;
 		}

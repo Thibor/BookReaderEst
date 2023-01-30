@@ -117,6 +117,7 @@ namespace NSProgram
 
 		public void TeacherTerminate()
 		{
+			enabled = false;
 			if (teacherProcess != null)
 			{
 				teacherProcess.OutputDataReceived -= OnDataReceived;
@@ -153,6 +154,7 @@ namespace NSProgram
 			CTData td = new CTData();
 			SetTData(td);
 			stoped = !enabled;
+			TeacherWriteLine("ucinewgame");
 		}
 
 		public void Stop()
@@ -163,7 +165,7 @@ namespace NSProgram
 
 		public bool SetTeacherFile(string teacherFile)
 		{
-			enabled = false;
+			TeacherTerminate();
 			if (File.Exists(teacherFile))
 			{
 				teacherProcess = new Process();
@@ -179,8 +181,6 @@ namespace NSProgram
 				teacherProcess.BeginOutputReadLine();
 				teacherProcess.PriorityClass = ProcessPriorityClass.Idle;
 				TeacherWriteLine("uci");
-				TeacherWriteLine("isready");
-				TeacherWriteLine("ucinewgame");
 				enabled = true;
 				stoped = true;
 				games = 0;
