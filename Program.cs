@@ -234,7 +234,7 @@ namespace NSProgram
 								Console.WriteLine("Writing to the file has failed");
 							break;
 						case "getoption":
-							Console.WriteLine($"option name Book file type string default book{CBook.defExt}");
+							Console.WriteLine($"option name book_file type string default book{CBook.defExt}");
 							Console.WriteLine($"option name Write type check default false");
 							Console.WriteLine($"option name Log type check default false");
 							Console.WriteLine($"option name Limit add moves type spin default {bookLimitAdd} min 0 max 100");
@@ -246,7 +246,7 @@ namespace NSProgram
 						case "setoption":
 							switch (uci.GetValue("name", "value").ToLower())
 							{
-								case "book file":
+								case "book_file":
 									bookFile = uci.GetValue("value");
 									break;
 								case "write":
