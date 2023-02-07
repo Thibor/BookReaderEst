@@ -235,12 +235,13 @@ namespace NSProgram
 							break;
 						case "getoption":
 							Console.WriteLine($"option name book_file type string default book{CBook.defExt}");
+							Console.WriteLine($"option name teacher_file type string default");
 							Console.WriteLine($"option name Write type check default false");
 							Console.WriteLine($"option name Log type check default false");
-							Console.WriteLine($"option name Limit add moves type spin default {bookLimitAdd} min 0 max 100");
-							Console.WriteLine($"option name Limit read ply type spin default {bookLimitR} min 0 max 100");
-							Console.WriteLine($"option name Limit write ply type spin default {bookLimitW} min 0 max 100");
-							Console.WriteLine($"option name Random moves type spin default {bookRandom} min 0 max 201");
+							Console.WriteLine($"option name limit_add_moves type spin default {bookLimitAdd} min 0 max 100");
+							Console.WriteLine($"option name limit_read_ply type spin default {bookLimitR} min 0 max 100");
+							Console.WriteLine($"option name limit_write_ply type spin default {bookLimitW} min 0 max 100");
+							Console.WriteLine($"option name random_moves type spin default {bookRandom} min 0 max 201");
 							Console.WriteLine("optionend");
 							break;
 						case "setoption":
@@ -249,22 +250,25 @@ namespace NSProgram
 								case "book_file":
 									bookFile = uci.GetValue("value");
 									break;
+								case "teacher_file":
+									teacherFile = uci.GetValue("value");
+									break;
 								case "write":
 									isW = uci.GetValue("value") == "true";
 									break;
 								case "log":
 									log.enabled = uci.GetValue("value") == "true";
 									break;
-								case "limit add moves":
+								case "limit_add_moves":
 									bookLimitAdd = uci.GetInt("value");
 									break;
-								case "limit read ply":
+								case "limit_read_ply":
 									bookLimitR = uci.GetInt("value");
 									break;
-								case "limit write ply":
+								case "limit_write_ply":
 									bookLimitW = uci.GetInt("value");
 									break;
-								case "Random":
+								case "random_moves":
 									bookRandom = uci.GetInt("value");
 									break;
 							}
@@ -416,7 +420,8 @@ namespace NSProgram
 				rl.UpdateTotal();
 				bookChanged = true;
 				string[] am = moves.Split();
-				log.Add($"added {++teacher.added} first {am[0]} {rl.First().depth} last {td.best} moves {am.Length} depth {td.depth} loop {loop}");
+				teacher.added++;
+				log.Add($"moves {book.recList.Count:N0} first {am[0]} {rl.First().depth} last {td.best} {td.depth} moves {am.Length} loop {loop}");
 			}
 
 			bool SetEngineFile(string ef)
@@ -437,9 +442,9 @@ namespace NSProgram
 				return false;
 			}
 
-			bool SetBookFile(string bn)
+			bool SetBookFile(string bf)
 			{
-				bookFile = bn;
+				bookFile = bf;
 				bookLoaded = book.LoadFromFile(bookFile);
 				if (bookLoaded)
 				{
