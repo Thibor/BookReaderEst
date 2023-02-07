@@ -17,11 +17,11 @@ namespace NSProgram
 		/// <summary>
 		/// Moves added to book per game.
 		/// </summary>
-		public static int bookLimitAdd = 4;
+		public static int bookLimitAdd = 8;
 		/// <summary>
 		/// Limit ply to wrtie.
 		/// </summary>
-		public static int bookLimitW = 0;
+		public static int bookLimitW = 8;
 		/// <summary>
 		/// Limit ply to read.
 		/// </summary>
@@ -212,7 +212,7 @@ namespace NSProgram
 							string moves = uci.GetValue("moves");
 							if (moves == "shallow")
 							{
-								moves = book.GetShallow(out _);
+								moves = book.GetShallow();
 								Console.WriteLine($"moves {moves.Split().Length}");
 								Console.WriteLine(moves);
 								int i = moves.LastIndexOf(' ');
@@ -220,6 +220,9 @@ namespace NSProgram
 									moves = moves.Substring(0, i);
 							}
 							book.InfoMoves(moves);
+							break;
+						case "info":
+							book.ShowInfo();
 							break;
 						case "structure":
 							book.InfoStructure();
@@ -306,11 +309,21 @@ namespace NSProgram
 							if (bookLoaded && isW)
 								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
 								{
-									string movesUci = $"{lastMoves} {myMove} {enMove}";
 									if (bookWrite)
-										book.AddUci(movesUci, true, bookLimitW, bookLimitAdd);
-									book.UpdateBack(movesUci, true);
-									bookChanged = true;
+									{
+										string moves = $"{lastMoves} {myMove} {enMove}";
+										string[] am = moves.Trim().Split();
+										book.AddUci(moves, true, bookLimitW, bookLimitAdd);
+										CRecList rl = book.MovesToRecList(moves);
+										CRec last = rl.Last();
+										int del = am.Length - rl.Count;
+										int score = Constants.CHECKMATE_MAX - 1 - (del >> 1);
+										if ((del & 1) > 0)
+											score = -score;
+										last.score = (short)score;
+										rl.UpdateTotal();
+										bookChanged = true;
+									}
 									teacher.Stop();
 								}
 						}
@@ -337,7 +350,7 @@ namespace NSProgram
 							{
 								bookChanged = true;
 								book.AddUci(lastMoves);
-								book.UpdateBack(lastMoves);
+								book.MovesToRecList(lastMoves).UpdateTotal();
 							}
 							emptyRow = 0;
 
@@ -360,10 +373,7 @@ namespace NSProgram
 						}
 					}
 					if (!bookChanged)
-					{
-						CRec rec = book.recList.GetRec();
-						bookChanged = book.UpdateRec(rec) > 0;
-					}
+						bookChanged = book.recList.GetRec().UpdateBack() > 0;
 					if (bookChanged)
 					{
 						bookChanged = false;
@@ -375,30 +385,23 @@ namespace NSProgram
 
 			void BookToTeacher()
 			{
-				string moves = book.GetShallow(out _);
+				string moves = book.GetShallow();
 				if (String.IsNullOrEmpty(moves))
 					return;
-				book.UpdateBack(moves);
-				book.chess.MakeMoves(moves, true);
-				string tnt = book.chess.GetTnt();
-				CRec bst = book.recList.GetRec(tnt);
-				List<int> ml = book.chess.GenerateValidMoves(out bool mate);
+				CRecList rl = book.MovesToRecList(moves);
+				CRec last = rl.Last();
+				CChessExt ch = new CChessExt();
+				ch.MakeMoves(moves);
+				List<int> ml = ch.GenerateValidMoves(out bool mate);
 				if (ml.Count == 0)
 				{
-					if (mate)
-					{
-						bst.depth = 0xff;
-						bst.score = (short)(Constants.CHECKMATE_MAX - 1);
-					}
-					else
-						bst.score = 0;
-					if (bst.depth < 0xff)
-						bst.depth++;
-					book.UpdateBack(moves);
+					last.depth = 0xff;
+					last.score = (short)(mate ? Constants.CHECKMATE_MAX - 1 : 0);
+					rl.UpdateTotal();
 					bookChanged = true;
 				}
 				else
-					teacher.Start(moves, bst.depth);
+					teacher.Start(moves,last.depth + 1);
 			}
 
 			void TeacherToBook(CTData td)
@@ -406,22 +409,17 @@ namespace NSProgram
 				if (string.IsNullOrEmpty(td.best))
 					return;
 				string moves = $"{td.moves} {td.best}";
-				book.AddUci(moves);
-				string tnt = book.chess.GetTnt(moves);
-				book.recList.SortTnt();
-				CRec rec = book.recList.GetRec(tnt);
-				if (rec == null)
-					log.Add($"wrong moves ({moves})");
-				else
-				{
-					rec.score = td.score;
-					rec.depth = td.lastDepth;
-					book.UpdateBack(moves);
-					bookChanged = true;
-					string[] am = moves.Split();
-					string mf = am.Length > 0 ? am[0] : string.Empty;
-					log.Add($"added {++teacher.added} first {mf} last {td.best} moves {am.Length} depth {td.depth}");
-				}
+				bool loop = book.AddUci(moves) == 0;
+				CRecList rl = book.MovesToRecList(moves);
+				if (rl.Count == 0)
+					return;
+				CRec last = rl.Last();
+				last.depth = td.lastDepth;
+				last.score = td.score;
+				rl.UpdateTotal();
+				bookChanged = true;
+				string[] am = moves.Split();
+				log.Add($"added {++teacher.added} first {am[0]} {rl.First().depth} last {td.best} moves {am.Length} depth {td.depth} loop {loop}");
 			}
 
 			bool SetEngineFile(string ef)

@@ -117,7 +117,7 @@ namespace NSProgram
 
 		public string GetTnt(string moves)
 		{
-			MakeMoves(moves,true);
+			StartMoves(moves);
 			return GetTnt();
 		}
 

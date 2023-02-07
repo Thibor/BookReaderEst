@@ -300,9 +300,8 @@ namespace NSProgram
 			recList.Clear();
 		}
 
-		public string GetShallow(out int depth)
+		public string GetShallow()
 		{
-			depth = int.MaxValue;
 			string result = String.Empty;
 			chess.SetFen();
 			CEmoList el = GetEmoList();
@@ -313,39 +312,26 @@ namespace NSProgram
 				chess.MakeMove(emo.emo);
 				if (chess.IsRepetition(0))
 					break;
-				else
-				{
-					if (depth > emo.rec.depth)
-						depth = emo.rec.depth;
-					string umo = chess.EmoToUmo(emo.emo);
-					result += $" {umo}";
-					el = GetEmoList(emo.rec.score);
-				}
+				string umo = chess.EmoToUmo(emo.emo);
+				result += $" {umo}";
+				el = GetEmoList();
 			}
-			if (result == String.Empty)
-				depth = 0;
 			return result.Trim();
 		}
 
-		public bool LoadFromFile()
-		{
-			return LoadFromFile(path);
-		}
-
-		public bool LoadFromFile(string p)
+		public bool LoadFromFile(string p = "")
 		{
 			if (String.IsNullOrEmpty(p))
-			{
 				if (String.IsNullOrEmpty(path))
 					return false;
-				return LoadFromFile(path);
-			}
+				else
+					return LoadFromFile(path);
 			stopWatch.Restart();
 			recList.Clear();
 			bool result = AddFile(p);
 			stopWatch.Stop();
 			TimeSpan ts = stopWatch.Elapsed;
-			Console.WriteLine($"info string Loaded in {ts.Seconds}.{ts.Milliseconds} seconds");
+			Console.WriteLine($"info string Loaded in {ts.TotalSeconds:N2} seconds");
 			return result;
 		}
 
@@ -425,93 +411,40 @@ namespace NSProgram
 			return (int)(((bitboard + (bitboard >> 4) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >> 56);
 		}
 
-		public bool UpdateBack(string moves, bool mate = false)
+		public CRecList MovesToRecList(string moves)
 		{
-			return UpdateBack(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries), mate);
+			return MovesToRecList(moves.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
 		}
 
-		public bool UpdateBack(List<string> moves, bool mate = false)
+		public CRecList MovesToRecList(string[] moves)
 		{
-			return UpdateBack(moves.ToArray(), mate);
-		}
-
-		public bool UpdateBack(string[] moves, bool mate = false)
-		{
-			int up = Program.updated;
-			List<CRec> lr = new List<CRec>();
-			chess.SetFen();
+			CChessExt ch = new CChessExt();
+			ch.SetFen();
+			CRecList rl = new CRecList();
 			foreach (string uci in moves)
-				if (chess.MakeMove(uci, out _))
+				if (ch.MakeMove(uci, out _))
 				{
-					string tnt = chess.GetTnt();
+					string tnt = ch.GetTnt();
 					CRec rec = recList.GetRec(tnt);
-					if (rec != null)
-						lr.Add(rec);
-					else break;
+					if (rec == null)
+						break;
+					rl.Add(rec);
 				}
 				else break;
-
-			if (mate)
-			{
-				int i = moves.Length - lr.Count;
-				int m = i + 2;
-				for (int n = lr.Count - 1; n >= 0; n--)
-				{
-					CRec rec = lr[n];
-					if ((++i & 1) > 0)
-						rec.score = (short)(Constants.CHECKMATE_MAX - m);
-					else
-						rec.score = (short)(-Constants.CHECKMATE_MAX + m);
-					if (m < Constants.CHECKMATE_MAX)
-						m++;
-				}
-			}
-
-			for (int n = lr.Count - 2; n >= 0; n--)
-				Program.updated += UpdateRec(lr[n], true);
-			return up != Program.updated;
+			return rl;
 		}
 
-		public int UpdateRec(CRec rec, bool upDepth = false)
+		public int AddUci(string moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
-			if (rec == null)
-				return 0;
-			chess.SetTnt(rec.tnt);
-			CEmoList emoList = GetEmoList();
-			if (emoList.Count == 0)
-				return 0;
-			CRec bst = emoList[0].rec;
-			int depth = bst.depth;
-			int score = bst.score;
-			if (upDepth)
-				depth = emoList.GetMinDepth();
-			score = -score;
-			if (++depth > 0xff)
-				depth = 0xff;
-			if (score > 0)
-				score--;
-			if (score < 0)
-				score++;
-			if ((rec.depth != depth) || (rec.score != score))
-			{
-				rec.depth = (byte)depth;
-				rec.score = (short)score;
-				return 1;
-			}
-			return 0;
+			return AddUci(moves.Trim().Split(), upAge, limitPly, limitAdd);
 		}
 
-		public bool AddUci(string moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
-		{
-			return AddUci(moves.Trim().Split(' '), upAge, limitPly, limitAdd);
-		}
-
-		public bool AddUci(List<string> moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
+		public int AddUci(List<string> moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
 			return AddUci(moves.ToArray(), upAge, limitPly, limitAdd);
 		}
 
-		public bool AddUci(string[] moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
+		public int AddUci(string[] moves, bool upAge = false, int limitPly = 0, int limitAdd = 0)
 		{
 			int ca = 0;
 			if ((limitPly == 0) || (limitPly > moves.Length))
@@ -522,19 +455,19 @@ namespace NSProgram
 				string m = moves[n];
 				if (chess.MakeMove(m, out _))
 				{
-					CRec rec = new CRec();
-					rec.tnt = chess.GetTnt();
+					CRec rec = new CRec() { tnt = chess.GetTnt() };
 					if (recList.AddRec(rec, upAge))
 					{
+						ca++;
 						Program.added++;
-						if ((limitAdd > 0) && (++ca >= limitAdd))
+						if ((limitAdd > 0) && (ca >= limitAdd))
 							break;
 					}
 				}
 				else
-					return false;
+					break;
 			}
-			return true;
+			return ca;
 		}
 
 		void RefreshAge()
@@ -632,7 +565,7 @@ namespace NSProgram
 			string umo = chess.EmoToUmo(bst.emo);
 			if (bst.rec != null)
 			{
-				string scFm = bst.rec.score > Constants.CHECKMATE_NEAR ? $"mate {(Constants.CHECKMATE_MAX - bst.rec.score) >> 1}" : (bst.rec.score < -Constants.CHECKMATE_NEAR ? $"mate {(-Constants.CHECKMATE_MAX - bst.rec.score) >> 1}" : $"cp {bst.rec.score}");
+				string scFm = bst.rec.score > Constants.CHECKMATE_NEAR ? $"mate {Constants.CHECKMATE_MAX - bst.rec.score}" : (bst.rec.score < -Constants.CHECKMATE_NEAR ? $"mate {-Constants.CHECKMATE_MAX - bst.rec.score}" : $"cp {bst.rec.score}");
 				Console.WriteLine($"info score {scFm} depth {bst.rec.depth}");
 				Console.WriteLine($"info string book {umo} {scFm} depth {bst.rec.depth} possible {emoList.Count} age {bst.rec.age}");
 			}
@@ -697,42 +630,55 @@ namespace NSProgram
 			}
 		}
 
+		double ProZeroDepth()
+		{
+			int result = 0;
+			foreach (CRec rec in recList)
+				if (rec.depth == 0)
+					result++;
+			return (result * 100.0) / recList.Count;
+		}
+
+		double ProZeroScore()
+		{
+			int result = 0;
+			foreach (CRec rec in recList)
+				if (rec.score == 0)
+					result++;
+			return (result * 100.0) / recList.Count;
+		}
+
 		public void ShowInfo()
 		{
+			Console.WriteLine($"Zero depth {ProZeroDepth():N4}%");
+			Console.WriteLine($"Zero score {ProZeroScore():N4}%");
 			InfoMoves();
 		}
 
 		public void Update()
 		{
-			Program.added = 0;
-			Program.updated = 0;
-			Program.deleted = 0;
-			int up = recList.Count;
-			int max;
-			CRecList rl = new CRecList();
+			int line = 0;
+			int up = 0;
+			recList.SortDepth();
 			foreach (CRec rec in recList)
-				rl.Add(rec);
-			rl.SortDepth();
-			do
 			{
-				int line = 0;
-				max = up;
-				up = 0;
-				foreach (CRec rec in rl)
-				{
-					up += UpdateRec(rec);
-					Console.Write($"\rupdate {(++line * 100.0 / recList.Count):N4}%");
-				}
-				Program.updated += up;
-				Console.WriteLine();
-				Console.WriteLine($"Updated {up:N0}");
-				SaveToFile();
-			} while ((max > up) && (up > 0));
-			Console.WriteLine($"records {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0}");
+				up += rec.UpdateBack();
+				Console.Write($"\rupdate {++line * 100.0 / recList.Count:N4}%");
+			}
+			recList.SortTnt();
+			SaveToFile();
+			Console.WriteLine();
+			Console.WriteLine($"updated {up:N0}");
+			Console.Beep();
 		}
 
-		public bool SaveToFile(string p)
+		public bool SaveToFile(string p = "")
 		{
+			if (string.IsNullOrEmpty(p))
+				if (string.IsNullOrEmpty(path))
+					return false;
+				else
+					SaveToFile(path);
 			string ext = Path.GetExtension(p).ToLower();
 			if (ext == defExt)
 				return SaveToEst(p);
@@ -743,12 +689,6 @@ namespace NSProgram
 			if (ext == ".txt")
 				return SaveToTxt(p);
 			return false;
-		}
-
-		public void SaveToFile()
-		{
-			if (!string.IsNullOrEmpty(path))
-				SaveToFile(path);
 		}
 
 		List<string> GetGames()

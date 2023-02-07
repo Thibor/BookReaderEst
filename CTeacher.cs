@@ -97,13 +97,13 @@ namespace NSProgram
 						int v = Convert.ToInt32(mate);
 						if (v > 0)
 						{
-							v = Constants.CHECKMATE_MAX - (v << 1);
+							v = Constants.CHECKMATE_MAX - v;
 							if (v <= Constants.CHECKMATE_NEAR)
 								v = Constants.CHECKMATE_NEAR + 1;
 						}
 						if (v < 0)
 						{
-							v = -Constants.CHECKMATE_MAX - (v << 1);
+							v = -Constants.CHECKMATE_MAX - v;
 							if (v >= -Constants.CHECKMATE_NEAR)
 								v = -Constants.CHECKMATE_NEAR - 1;
 						}
@@ -136,27 +136,26 @@ namespace NSProgram
 			SetTData(td);
 		}
 
-		public void Start(string moves, int depth)
+		public bool Start(string moves, int depth)
 		{
-			Console.WriteLine($"info string teacher moves {moves.Split().Length} depth {depth}");
-			depth++;
-			games++;
-			if (stoped || String.IsNullOrEmpty(moves) || (depth > 0xff))
-				return;
+			if (stoped)
+				return false;
 			if ((time < 4) && (minDepth < 0xff))
 				minDepth++;
 			if ((time > 4) && (minDepth > 0xf))
 				minDepth--;
 			if (depth < minDepth)
 				depth = minDepth;
+			if (depth > 0xff)
+				depth = 0xff;
 			time = 0;
-			CTData td = new CTData();
-			td.empty = false;
-			td.moves = moves;
-			td.depth = (byte)depth;
+			games++;
+			CTData td = new CTData() { empty = false, moves = moves, depth = (byte)depth };
 			SetTData(td);
 			TeacherWriteLine($"position startpos moves {moves}");
 			TeacherWriteLine($"go depth {depth}");
+			Console.WriteLine($"info string teacher moves {moves.Split().Length} depth {depth}");
+			return true;
 		}
 		public void Stop()
 		{

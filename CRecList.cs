@@ -10,6 +10,28 @@ namespace NSProgram
 		public byte depth = 0;
 		public string tnt = String.Empty;
 
+		public int UpdateBack()
+		{
+			Program.book.chess.SetTnt(tnt);
+			CEmoList emoList = Program.book.GetEmoList();
+			if (emoList.Count == 0)
+				return 0;
+			CRec bst = emoList[0].rec;
+			int d = emoList.GetMinDepth() + 1;
+			int s = -bst.score;
+			if (d > 0xff)
+				d = 0xff;
+			if (s > 0)
+				s--;
+			if ((depth != d) || (score != s))
+			{
+				depth = (byte)d;
+				score = (short)s;
+				return 1;
+			}
+			return 0;
+		}
+
 	}
 
 	class CRecList : List<CRec>
@@ -56,7 +78,7 @@ namespace NSProgram
 		{
 			int result = 0;
 			string last = String.Empty;
-			for(int n=Count-1;n>=0;n--)
+			for (int n = Count - 1; n >= 0; n--)
 			{
 				CRec rec = this[n];
 				if (rec.tnt == last)
@@ -141,8 +163,8 @@ namespace NSProgram
 			for (int n = 0; n < Count - 1; n++)
 			{
 				string t1 = this[n].tnt;
-				string t2 = this[n+1].tnt;
-				if (String.Compare(t1,t2, StringComparison.Ordinal) > 0)
+				string t2 = this[n + 1].tnt;
+				if (String.Compare(t1, t2, StringComparison.Ordinal) > 0)
 				{
 					Console.WriteLine($"sort fail record {n} count {SortFail()}");
 					Console.WriteLine(t1);
@@ -152,6 +174,67 @@ namespace NSProgram
 			}
 			Console.WriteLine("sort ok");
 			return true;
+		}
+
+		public void UpdateLoop()
+		{
+			foreach (CRec rec in this)
+				if (rec.depth < 0xff)
+					rec.depth++;
+		}
+
+		public CRec First()
+		{
+			return Count == 0 ? null : this[0];
+		}
+
+		public CRec Last()
+		{
+			return Count == 0 ? null : this[Count - 1];
+		}
+
+		public void UpdateBack()
+		{
+			for (int n = Count - 1; n >= 0; n--)
+				this[n].UpdateBack();
+		}
+
+		public void UpdateTotal()
+		{
+			UpdateDepth();
+			UpdateScore();
+			UpdateBack();
+		}
+
+		public void UpdateDepth()
+		{
+			byte depth = this.Last().depth;
+			for (int n = Count - 1; n >= 0; n--)
+			{
+				CRec rec = this[n];
+				rec.depth = depth;
+				if (depth < 0xff)
+					depth++;
+			}
+		}
+
+		public void UpdateScore()
+		{
+			short score = this.Last().score;
+			for (int n = 0; n < Count; n++)
+			{
+				CRec rec = this[Count - 1 - n];
+				if ((n & 1) == 0)
+					rec.score = score;
+				else
+				{
+					rec.score = (short)-score;
+					if (score > 0)
+						score--;
+					if (score < 0)
+						score++;
+				}
+			}
 		}
 
 		public int SortFail()

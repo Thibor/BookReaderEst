@@ -53,6 +53,21 @@ namespace RapLog
 			File.WriteAllLines(path, list);
 		}
 
+		public void Add(bool v)
+		{
+			Add(v.ToString());
+		}
+
+		public void Add(int v)
+		{
+			Add(v.ToString());
+		}
+
+		public void Add(double v)
+		{
+			Add(v.ToString());
+		}
+
 		public List<string> List()
 		{
 			List<string> list = new List<string>();

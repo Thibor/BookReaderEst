@@ -70,6 +70,7 @@ namespace NSChess
 		{
 			This = this;
 			Initialize();
+			SetFen();
 		}
 
 		public void Initialize()
@@ -718,11 +719,16 @@ namespace NSChess
 			return true;
 		}
 
-		public bool MakeMoves(string moves,bool start = false)
+		public bool MakeMoves(string moves)
 		{
-			if (start)
-				SetFen();
 			return MakeMoves(moves.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
+		}
+
+
+		public bool StartMoves(string moves)
+		{
+			SetFen();
+			return MakeMoves(moves);
 		}
 
 		public bool IsValidMove(int emo)
