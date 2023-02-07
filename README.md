@@ -12,8 +12,8 @@ To use this program you need install  <a href="https://dotnet.microsoft.com/down
 **-w** Write new moves to the book<br/>
 **-u** update moves in the book<br/>
 **-lr** Limit maximum ply depth when Read from book (default 8) 0 means no limit<br/>
-**-lw** Limit maximum ply depth when Write to book (default 0) 0 means no limit<br/>
-**-add** Limit ADDed moves per game (default 4) 0 means no limit<br/>
+**-lw** Limit maximum ply depth when Write to book (default 8) 0 means no limit<br/>
+**-add** Limit ADDed moves per game (default 8) 0 means no limit<br/>
 **-rnd** RaNDomization (default 50) 0 - means choose best move 100 - mean choose random move 200 - mean choose worst move<br/>
 **-log** Create LOG file<br/>
 **-info** show additional INFOrmation<br/>
