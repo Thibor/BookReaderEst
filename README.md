@@ -29,7 +29,7 @@ To use this program you need install  <a href="https://dotnet.microsoft.com/down
 **book adduci** [uci] - adds a sequence of moves in uci format<br/>
 **book addfen** [fen] - add position in fen format<br/>
 **book moves** [uci] - make sequence of moves in uci format and shows possible continuations<br/>
-**book structure** - show structure of current book<br/>
+**book info* - show extra informations of current book<br/>
 **book getoption** - show options<br/>
 **book setoption name [option name] value [option value]** - set option<br/>
 **quit** quit the program as soon as possible

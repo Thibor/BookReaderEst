@@ -111,7 +111,7 @@ namespace NSProgram
 								listEa.Add(ac);
 								break;
 							case "-w":
-								ac = ac.Replace("K", "000").Replace("M", "000000");
+								ac = ac.ToLower().Replace("k", "000").Replace("m", "000000");
 								book.maxRecords = int.TryParse(ac, out int m) ? m : 0;
 								break;
 							case "-add":
@@ -166,7 +166,7 @@ namespace NSProgram
 					Console.WriteLine("book addfen [fen] - add position in fen format");
 					Console.WriteLine("book clear - clear all moves from the book");
 					Console.WriteLine("book moves [uci] - make sequence of moves in uci format and shows possible continuations");
-					Console.WriteLine("book structure - show structure of current book");
+					Console.WriteLine("book info - show extra informations of current book");
 					Console.WriteLine("book getoption - show options");
 					Console.WriteLine("book setoption name [option name] value [option value] - set option");
 					continue;
@@ -223,9 +223,6 @@ namespace NSProgram
 							break;
 						case "info":
 							book.ShowInfo();
-							break;
-						case "structure":
-							book.InfoStructure();
 							break;
 						case "update":
 							book.Update();

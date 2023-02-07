@@ -652,6 +652,7 @@ namespace NSProgram
 		{
 			Console.WriteLine($"Zero depth {ProZeroDepth():N4}%");
 			Console.WriteLine($"Zero score {ProZeroScore():N4}%");
+			InfoStructure();
 			InfoMoves();
 		}
 
