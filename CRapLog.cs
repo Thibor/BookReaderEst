@@ -40,9 +40,7 @@ namespace RapLog
 		{
 			if (!enabled)
 				return;
-			List<string> list = new List<string>();
-			if (File.Exists(path))
-				list = File.ReadAllLines(path).ToList();
+			List<string> list = List();
 			if (addDate)
 				list.Insert(0, $"{DateTime.Now} {m}");
 			else

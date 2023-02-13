@@ -331,7 +331,7 @@ namespace NSProgram
 			bool result = AddFile(p);
 			stopWatch.Stop();
 			TimeSpan ts = stopWatch.Elapsed;
-			Console.WriteLine($"info string Loaded in {ts.TotalSeconds:N2} seconds");
+			Console.WriteLine($"info string {recList.Count:N0} moves loaded in {ts.TotalSeconds:N2} seconds");
 			return result;
 		}
 
@@ -592,6 +592,7 @@ namespace NSProgram
 			int ageMin = AgeMin();
 			int ageDel = AgeDel();
 			Console.WriteLine($"moves {recList.Count:N0} min {ageMin:N0} avg {ageAvg:N0} max {ageMax:N0} delta {ageDel:N0}");
+			Console.WriteLine();
 			Console.WriteLine("{0,4} {1,5} {2,5}", "age", "count", "delta");
 			Console.WriteLine();
 			RefreshAge();
@@ -618,6 +619,7 @@ namespace NSProgram
 					Console.WriteLine("no moves found");
 				else
 				{
+					Console.WriteLine();
 					Console.WriteLine("id move  score depth age");
 					Console.WriteLine();
 					int i = 1;
