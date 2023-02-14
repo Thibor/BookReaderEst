@@ -19,7 +19,6 @@ namespace NSProgram
 		readonly CHeader header = new CHeader();
 		public CRecList recList = new CRecList();
 		readonly CBuffer buffer = new CBuffer();
-		readonly Stopwatch stopWatch = new Stopwatch();
 
 		#region file est
 
@@ -199,6 +198,56 @@ namespace NSProgram
 
 		#region file pgn
 
+		bool AddFilePgn(string p,bool show = false)
+		{
+			if (!File.Exists(p))
+				return true;
+			List<string> listPgn = File.ReadAllLines(p).ToList();
+			string movesUci = String.Empty;
+			chess.SetFen();
+			foreach (string m in listPgn)
+			{
+				string cm = m.Trim();
+				if (String.IsNullOrEmpty(cm))
+					continue;
+				if (cm[0] == '[')
+					continue;
+				cm = Regex.Replace(cm, @"\.(?! |$)", ". ");
+				if (cm.StartsWith("1. "))
+				{
+					AddUci(movesUci);
+					if(show)
+					Console.Write($"\rAdded {recList.Count} moves");
+					movesUci = String.Empty;
+					chess.SetFen();
+				}
+				string[] arrMoves = cm.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (string san in arrMoves)
+				{
+					if (Char.IsDigit(san[0]))
+						continue;
+					string umo = chess.SanToUmo(san);
+					if (umo == String.Empty)
+					{
+						errors++;
+						break;
+					}
+					movesUci += $" {umo}";
+					int emo = chess.UmoToEmo(umo);
+					chess.MakeMove(emo);
+				}
+			}
+			AddUci(movesUci);
+			if (show)
+			{
+				Console.WriteLine();
+				Console.WriteLine($"Found {errors:N2} errors");
+				Console.WriteLine("Finish");
+				Console.Beep();
+			}
+			return true;
+		}
+
 		public bool SaveToPgn(string p)
 		{
 			List<string> sl = GetGames();
@@ -263,18 +312,6 @@ namespace NSProgram
 
 		#endregion file txt
 
-		public void ShowMoves(bool last = false)
-		{
-			Console.Write($"\r{recList.Count} moves");
-			if (last)
-			{
-				Console.WriteLine();
-				if (errors > 0)
-					Console.WriteLine($"{errors} errors");
-				errors = 0;
-			}
-		}
-
 		int AgeAvg()
 		{
 			return (recList.Count >> 8) + 1;
@@ -319,23 +356,19 @@ namespace NSProgram
 			return result.Trim();
 		}
 
-		public bool LoadFromFile(string p = "")
+		public bool LoadFromFile(string p = "",bool show = false)
 		{
 			if (String.IsNullOrEmpty(p))
 				if (String.IsNullOrEmpty(path))
 					return false;
 				else
 					return LoadFromFile(path);
-			stopWatch.Restart();
 			recList.Clear();
-			bool result = AddFile(p);
-			stopWatch.Stop();
-			TimeSpan ts = stopWatch.Elapsed;
-			Console.WriteLine($"info string {recList.Count:N0} moves loaded in {ts.TotalSeconds:N2} seconds");
+			bool result = AddFileInfo(p,show);
 			return result;
 		}
 
-		public bool AddFile(string p)
+		public bool AddFile(string p, bool show = false)
 		{
 			string ext = Path.GetExtension(p).ToLower();
 			if (ext == defExt)
@@ -343,51 +376,26 @@ namespace NSProgram
 			else if (ext == ".uci")
 				return AddFileUci(p);
 			else if (ext == ".pgn")
-				return AddFilePgn(p);
+				return AddFilePgn(p,show);
 			return false;
 		}
 
-		bool AddFilePgn(string p)
+		public bool AddFileInfo(string p, bool show = false)
 		{
 			if (!File.Exists(p))
-				return true;
-			List<string> listPgn = File.ReadAllLines(p).ToList();
-			string movesUci = String.Empty;
-			chess.SetFen();
-			foreach (string m in listPgn)
 			{
-				string cm = m.Trim();
-				if (String.IsNullOrEmpty(cm))
-					continue;
-				if (cm[0] == '[')
-					continue;
-				cm = Regex.Replace(cm, @"\.(?! |$)", ". ");
-				if (cm.StartsWith("1. "))
-				{
-					AddUci(movesUci);
-					ShowMoves();
-					movesUci = String.Empty;
-					chess.SetFen();
-				}
-				string[] arrMoves = cm.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-				foreach (string san in arrMoves)
-				{
-					if (Char.IsDigit(san[0]))
-						continue;
-					string umo = chess.SanToUmo(san);
-					if (umo == String.Empty)
-					{
-						errors++;
-						break;
-					}
-					movesUci += $" {umo}";
-					int emo = chess.UmoToEmo(umo);
-					chess.MakeMove(emo);
-				}
+				Console.WriteLine($"info string file {Path.GetFileName(p)} not found");
+				return true;
 			}
-			AddUci(movesUci);
-			ShowMoves();
-			return true;
+			Stopwatch stopWatch = new Stopwatch();
+			stopWatch.Start();
+			int count = recList.Count;
+			bool result = AddFile(p,show);
+			count = recList.Count - count;
+			stopWatch.Stop();
+			TimeSpan ts = stopWatch.Elapsed;
+			Console.WriteLine($"info string {count:N0} moves added in {ts.TotalSeconds:N2} seconds");
+			return result;
 		}
 
 		public bool AddFen(string fen)

@@ -184,13 +184,7 @@ namespace NSProgram
 								Console.WriteLine("Wrong fen");
 							break;
 						case "addfile":
-							string fn = uci.GetValue("addfile");
-							if (File.Exists(fn))
-							{
-								book.AddFile(fn);
-								book.ShowMoves(true);
-							}
-							else Console.WriteLine("File not found");
+							book.AddFileInfo(uci.GetValue("addfile"),true);
 							break;
 						case "adduci":
 							book.AddUci(uci.GetValue("adduci"));
@@ -205,8 +199,7 @@ namespace NSProgram
 							Console.WriteLine($"{c:N0} moves was deleted");
 							break;
 						case "load":
-							book.LoadFromFile(uci.GetValue("load"));
-							book.ShowMoves(true);
+							book.LoadFromFile(uci.GetValue("load"),true);
 							break;
 						case "moves":
 							string moves = uci.GetValue("moves");
@@ -402,7 +395,7 @@ namespace NSProgram
 					bookChanged = true;
 				}
 				else
-					teacher.Start(moves,last.depth + 1);
+					teacher.Start(moves, last.depth + 1);
 			}
 
 			void TeacherToBook(CTData td)
