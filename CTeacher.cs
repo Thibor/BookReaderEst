@@ -78,7 +78,7 @@ namespace NSProgram
 						uci.GetValue("bestmove", out td.best);
 						td.finished = true;
 						SetTData(td);
-						Console.WriteLine($"info string teacher move {td.best}");
+						Console.WriteLine($"info string teacher depth {td.depth} moves {td.moves}");
 						return;
 					}
 					if (uci.GetValue("cp", out string value))
@@ -154,7 +154,6 @@ namespace NSProgram
 			SetTData(td);
 			TeacherWriteLine($"position startpos moves {moves}");
 			TeacherWriteLine($"go depth {depth}");
-			Console.WriteLine($"info string teacher moves {moves.Split().Length} depth {depth}");
 			return true;
 		}
 		public void Stop()

@@ -193,9 +193,9 @@ namespace NSProgram
 			return Count == 0 ? null : this[Count - 1];
 		}
 
-		public void UpdateBack()
+		public void UpdateBack(int fr = 1)
 		{
-			for (int n = Count - 1; n >= 0; n--)
+			for (int n = Count - fr; n >= 0; n--)
 				this[n].UpdateBack();
 		}
 
@@ -203,7 +203,7 @@ namespace NSProgram
 		{
 			UpdateDepth();
 			UpdateScore();
-			UpdateBack();
+			UpdateBack(2);
 		}
 
 		public void UpdateDepth()
@@ -235,6 +235,14 @@ namespace NSProgram
 						score++;
 				}
 			}
+		}
+
+		string GetScores()
+		{
+			string result = string.Empty;
+			foreach(CRec rec in this)
+				result += $" {rec.score}";
+			return result.Trim();
 		}
 
 		public int SortFail()

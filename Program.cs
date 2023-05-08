@@ -51,7 +51,6 @@ namespace NSProgram
 			/// Number of moves not found in a row.
 			/// </summary>
 			int emptyRow = 0;
-			int emptyTotal = 0;
 			/// <summary>
 			/// Random moves factor.
 			/// </summary>
@@ -173,10 +172,13 @@ namespace NSProgram
 				}
 				uci.SetMsg(msg);
 				int count = book.recList.Count;
-				if (uci.command == "book")
+				if (uci[0] == "book")
 				{
 					switch (uci.tokens[1])
 					{
+						case "isready":
+							Console.WriteLine("book readyok");
+							break;
 						case "addfen":
 							if (book.AddFen(uci.GetValue("addfen")))
 								Console.WriteLine("Fen have been added");
@@ -220,6 +222,9 @@ namespace NSProgram
 						case "update":
 							book.Update();
 							break;
+						case "reset":
+							book.Reset();
+							break;
 						case "save":
 							if (book.SaveToFile(uci.GetValue("save")))
 								Console.WriteLine("The book has been saved");
@@ -241,7 +246,7 @@ namespace NSProgram
 							switch (uci.GetValue("name", "value").ToLower())
 							{
 								case "book_file":
-									bookFile = uci.GetValue("value");
+									SetBookFile( uci.GetValue("value"));
 									break;
 								case "teacher_file":
 									teacherFile = uci.GetValue("value");
@@ -266,9 +271,6 @@ namespace NSProgram
 									break;
 							}
 							break;
-						case "optionend":
-							SetBookFile(bookFile);
-							break;
 						default:
 							Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
 							break;
@@ -292,7 +294,6 @@ namespace NSProgram
 								bookChanged = false;
 								bookWrite = isW;
 								emptyRow = 0;
-								emptyTotal = 0;
 								added = 0;
 								updated = 0;
 								deleted = 0;
@@ -300,8 +301,8 @@ namespace NSProgram
 							}
 							else if ((book.chess.halfMove >> 1) == 1)
 								teacher.SetTeacherFile(teacherFile);
-							if (bookLoaded && isW)
-								if (book.chess.Is2ToEnd(out string myMove, out string enMove))
+							if (isW)
+								if (bookWrite && book.chess.Is2ToEnd(out string myMove, out string enMove))
 								{
 									if (bookWrite)
 									{
@@ -317,6 +318,7 @@ namespace NSProgram
 										last.score = (short)score;
 										rl.UpdateTotal();
 										bookChanged = true;
+										book.AddLog();
 									}
 									teacher.Stop();
 								}
@@ -328,10 +330,7 @@ namespace NSProgram
 							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
 						if (String.IsNullOrEmpty(move))
 						{
-							if ((!teacher.enabled) && (emptyTotal == 0))
-								log.Add(lastMoves);
 							emptyRow++;
-							emptyTotal++;
 							if (engineProcess == null)
 								Console.WriteLine("enginemove");
 							else
@@ -351,7 +350,7 @@ namespace NSProgram
 						}
 						break;
 				}
-				if (bookLoaded && isW)
+				if (isW)
 				{
 					if (teacher.enabled)
 					{
@@ -403,7 +402,7 @@ namespace NSProgram
 				if (string.IsNullOrEmpty(td.best))
 					return;
 				string moves = $"{td.moves} {td.best}";
-				bool loop = book.AddUci(moves) == 0;
+				book.AddUci(moves);
 				CRecList rl = book.MovesToRecList(moves);
 				if (rl.Count == 0)
 					return;
@@ -412,9 +411,7 @@ namespace NSProgram
 				last.score = td.score;
 				rl.UpdateTotal();
 				bookChanged = true;
-				string[] am = moves.Split();
 				teacher.added++;
-				log.Add($"moves {book.recList.Count:N0} first {am[0]} {rl.First().depth} last {td.best} {td.depth} moves {am.Length} loop {loop}");
 			}
 
 			bool SetEngineFile(string ef)
@@ -439,6 +436,8 @@ namespace NSProgram
 			{
 				bookFile = bf;
 				bookLoaded = book.LoadFromFile(bookFile);
+				if (teacherOn)
+					isW = true;
 				if (bookLoaded)
 				{
 					if ((book.recList.Count > 0) && File.Exists(book.path))
@@ -451,9 +450,8 @@ namespace NSProgram
 						Console.WriteLine($"info string write on");
 					if (isInfo)
 						book.ShowInfo();
-				}
-				if (teacherOn)
-					isW = true;
+				}else
+					isW = false;
 				if (isW)
 				{
 					bookLimitR = 0;

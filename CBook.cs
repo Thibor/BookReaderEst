@@ -84,7 +84,6 @@ namespace NSProgram
 			string pt = p + ".tmp";
 			RefreshAge();
 			int maxAge = GetMaxAge();
-			double totalDepth = 0;
 			Program.deleted = 0;
 			if (maxRecords > 0)
 				Program.deleted = recList.Count - maxRecords;
@@ -92,7 +91,7 @@ namespace NSProgram
 				Program.deleted = AgeAvg() >> 5;
 			if (Program.deleted > 0)
 				Delete(Program.deleted);
-			Program.LogMsg("doubled records", recList.IsDoubled());
+			recList.SortTnt();
 			try
 			{
 				using (FileStream fs = File.Open(pt, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -102,7 +101,6 @@ namespace NSProgram
 					buffer.Write(header.GetHeader());
 					foreach (CRec rec in recList)
 					{
-						totalDepth += rec.depth;
 						if (rec.tnt == lastTnt)
 						{
 							Program.deleted++;
@@ -150,10 +148,17 @@ namespace NSProgram
 			{
 				return false;
 			}
-			double depth = totalDepth / recList.Count;
 			if (maxAge > 0)
-				Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} teacher {Program.teacher.added} oldest {arrAge[0xff]} depth {depth:N2} max {maxAge}");
+				AddLog();
 			return true;
+		}
+
+		public void AddLog()
+		{
+			double proZS = ProZeroScore();
+			double proZD = ProZeroDepth(out ulong totalDepth);
+			double avgDepth = (double)totalDepth / recList.Count;
+			Program.log.Add($"book {recList.Count:N0} added {Program.added} updated {Program.updated} deleted {Program.deleted:N0} (zero score {proZS:N2}%) (zero depth {proZD:N2}%) (avg depth {avgDepth:N2})");
 		}
 
 		int TntToInt(char tnt)
@@ -198,7 +203,7 @@ namespace NSProgram
 
 		#region file pgn
 
-		bool AddFilePgn(string p,bool show = false)
+		bool AddFilePgn(string p, bool show = false)
 		{
 			if (!File.Exists(p))
 				return true;
@@ -216,8 +221,8 @@ namespace NSProgram
 				if (cm.StartsWith("1. "))
 				{
 					AddUci(movesUci);
-					if(show)
-					Console.Write($"\rAdded {recList.Count} moves");
+					if (show)
+						Console.Write($"\rAdded {recList.Count} moves");
 					movesUci = String.Empty;
 					chess.SetFen();
 				}
@@ -266,7 +271,7 @@ namespace NSProgram
 						if (san == String.Empty)
 							break;
 						int number = (chess.halfMove >> 1) + 1;
-						if (chess.whiteTurn)
+						if (chess.WhiteTurn)
 							pgn += $"{number}. {san} ";
 						else
 							pgn += $"{san} ";
@@ -339,24 +344,27 @@ namespace NSProgram
 
 		public string GetShallow()
 		{
+			byte depth = byte.MaxValue;
 			string result = String.Empty;
 			chess.SetFen();
-			CEmoList el = GetEmoList();
-			while (el.Count > 0)
+			while (true)
 			{
+				CEmoList el = GetEmoList();
+				if (el.Count == 0)
+					break;
 				el.SortFlat();
 				CEmo emo = el[0];
-				chess.MakeMove(emo.emo);
-				if (chess.IsRepetition(0))
+				if (emo.rec.depth > depth)
 					break;
+				depth = emo.rec.depth;
+				chess.MakeMove(emo.emo);
 				string umo = chess.EmoToUmo(emo.emo);
 				result += $" {umo}";
-				el = GetEmoList();
 			}
 			return result.Trim();
 		}
 
-		public bool LoadFromFile(string p = "",bool show = false)
+		public bool LoadFromFile(string p = "", bool show = false)
 		{
 			if (String.IsNullOrEmpty(p))
 				if (String.IsNullOrEmpty(path))
@@ -364,8 +372,7 @@ namespace NSProgram
 				else
 					return LoadFromFile(path);
 			recList.Clear();
-			bool result = AddFileInfo(p,show);
-			return result;
+			return AddFileInfo(p, show);
 		}
 
 		public bool AddFile(string p, bool show = false)
@@ -376,7 +383,7 @@ namespace NSProgram
 			else if (ext == ".uci")
 				return AddFileUci(p);
 			else if (ext == ".pgn")
-				return AddFilePgn(p,show);
+				return AddFilePgn(p, show);
 			return false;
 		}
 
@@ -390,7 +397,7 @@ namespace NSProgram
 			Stopwatch stopWatch = new Stopwatch();
 			stopWatch.Start();
 			int count = recList.Count;
-			bool result = AddFile(p,show);
+			bool result = AddFile(p, show);
 			count = recList.Count - count;
 			stopWatch.Stop();
 			TimeSpan ts = stopWatch.Elapsed;
@@ -529,11 +536,11 @@ namespace NSProgram
 			return el;
 		}
 
-		public CEmoList GetEmoList(short score = 0, int repetytion = -1)
+		/*public CEmoList GetEmoList()
 		{
 			score = Math.Abs(score);
 			CEmoList emoList = new CEmoList();
-			List<int> moves = chess.GenerateValidMoves(out _, repetytion);
+			List<int> moves = chess.GenerateValidMoves(out _,0);
 			foreach (int m in moves)
 			{
 				chess.MakeMove(m);
@@ -549,7 +556,56 @@ namespace NSProgram
 			}
 			emoList.SortMat();
 			return emoList;
+		}*/
+
+		public CEmoList GetEmoList(bool backMove = true)
+		{
+			string tnt = chess.GetTnt();
+			CRec rec = recList.GetRec(tnt);
+			int score = rec == null ? 0 : Math.Abs(rec.score);
+			CEmoList emoList = new CEmoList();
+			List<int> moves = chess.GenerateValidMoves(out _, 0);
+			foreach (int m in moves)
+			{
+				chess.MakeMove(m);
+				tnt = chess.GetTnt();
+				rec = recList.GetRec(tnt);
+				if (rec != null)
+					if (backMove || ((Math.Abs(rec.score) >= score) || chess.MoveIsForth(m)))
+					{
+						CEmo emo = new CEmo(m, rec);
+						emoList.Add(emo);
+					}
+				chess.UnmakeMove(m);
+			}
+			emoList.SortMat();
+			return emoList;
 		}
+
+		/*public CEmoList GetEmoListForth()
+		{
+			string tnt = chess.GetTnt();
+			CRec rec = recList.GetRec(tnt);
+			int score = rec == null ? 0 : Math.Abs(rec.score);
+			CEmoList emoList = new CEmoList();
+			List<int> moves = chess.GenerateValidMoves(out _, 0);
+			foreach (int m in moves)
+			{
+				bool back = chess.MoveIsBack(m);
+				chess.MakeMove(m);
+				tnt = chess.GetTnt();
+				rec = recList.GetRec(tnt);
+				if (rec != null)
+					if ((Math.Abs(rec.score) > score) || !back)
+					{
+						CEmo emo = new CEmo(m, rec);
+						emoList.Add(emo);
+					}
+				chess.UnmakeMove(m);
+			}
+			emoList.SortMat();
+			return emoList;
+		}*/
 
 		public string GetMove(string fen, string moves, int rnd, ref bool bookWrite)
 		{
@@ -634,19 +690,51 @@ namespace NSProgram
 					foreach (CEmo e in el)
 					{
 						string umo = chess.EmoToUmo(e.emo);
-						Console.WriteLine(String.Format("{0,2} {1,-4} {2,6} {3,5} {4,3}", i++, umo, e.rec.score, e.rec.depth, e.rec.age));
+						string scFm = e.rec.score > Constants.CHECKMATE_NEAR ? $"+{Constants.CHECKMATE_MAX - e.rec.score}M" : (e.rec.score < -Constants.CHECKMATE_NEAR ? $"{-Constants.CHECKMATE_MAX - e.rec.score}M" : $"{e.rec.score}");
+						Console.WriteLine(String.Format("{0,2} {1,-4} {2,6} {3,5} {4,3}", i++, umo, scFm, e.rec.depth, e.rec.age));
 					}
 				}
 			}
 		}
 
-		double ProZeroDepth()
+		double ProZeroDepth(out ulong totalDepth)
 		{
+			totalDepth = 0;
 			int result = 0;
 			foreach (CRec rec in recList)
 				if (rec.depth == 0)
 					result++;
+				else
+					totalDepth += rec.depth;
 			return (result * 100.0) / recList.Count;
+		}
+
+		void InfoDepth(out byte minV, out byte maxV, out ulong minC, out ulong maxC, out ulong total)
+		{
+			minV = byte.MaxValue;
+			maxV = byte.MinValue;
+			minC = 0;
+			maxC = 0;
+			total = 0;
+			foreach (CRec rec in recList)
+			{
+				byte d = rec.depth;
+				total += d;
+				if (minV > d)
+				{
+					minV = d;
+					minC = 0;
+				}
+				if (maxV < d)
+				{
+					maxV = d;
+					maxC = 0;
+				}
+				if (minV == d)
+					minC++;
+				if (maxV == d)
+					maxC++;
+			}
 		}
 
 		double ProZeroScore()
@@ -660,8 +748,17 @@ namespace NSProgram
 
 		public void ShowInfo()
 		{
-			Console.WriteLine($"Zero depth {ProZeroDepth():N4}%");
-			Console.WriteLine($"Zero score {ProZeroScore():N4}%");
+			Console.WriteLine($"Records {recList.Count}");
+			if (recList.Count == 0)
+				return;
+			InfoDepth(out byte minV, out byte maxV, out ulong minC, out ulong maxC, out ulong totalDepth);
+			double proZS = ProZeroScore();
+			double avgDepth = (double)totalDepth / recList.Count;
+			Console.WriteLine($"Depth min {minV} ({minC})");
+			Console.WriteLine($"Depth max {maxV} ({maxC})");
+			Console.WriteLine($"Depth avg {avgDepth:N4}%");
+			Console.WriteLine($"Records doubled {recList.IsDoubled()}");
+			Console.WriteLine($"Zero score {proZS:N4}%");
 			InfoStructure();
 			InfoMoves();
 		}
@@ -676,11 +773,17 @@ namespace NSProgram
 				up += rec.UpdateBack();
 				Console.Write($"\rupdate {++line * 100.0 / recList.Count:N4}%");
 			}
-			recList.SortTnt();
 			SaveToFile();
 			Console.WriteLine();
 			Console.WriteLine($"updated {up:N0}");
 			Console.Beep();
+		}
+
+		public void Reset()
+		{
+			for (int n = 0; n < recList.Count; n++)
+				recList[n].depth = 0;
+			SaveToFile();
 		}
 
 		public bool SaveToFile(string p = "")
@@ -719,9 +822,9 @@ namespace NSProgram
 			{
 				chess.SetFen();
 				chess.MakeMoves(moves);
-				if (chess.IsRepetition(0))
-					return false;
-				CEmoList el = GetEmoList(score);
+				//if (chess.IsRepetition(0))return false;
+				//CEmoList el = GetEmoList(score);
+				CEmoList el = GetEmoList(false);
 				if (el.Count > 0)
 				{
 					proU /= el.Count;

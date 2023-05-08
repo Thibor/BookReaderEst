@@ -54,12 +54,12 @@ namespace NSProgram
 
 		public string GetBoaS()
 		{
-			string result = "";
+			string result = string.Empty;
 			for (int row = 0; row < 8; row++)
 				for (int col = 0; col < 8; col++)
 				{
-					int i = ((row + 4) << 4) + col + 4;
-					int piece = g_board[i];
+					int i = (row << 3) | col;
+					int piece = board[i];
 					if (piece == colorEmpty)
 						result += "-";
 					else
@@ -78,16 +78,16 @@ namespace NSProgram
 				chars[7] = 't';
 			if ((castleRights & 8) != 0)
 				chars[0] = 't';
-			if (passing != 0)
+			if (passing >= 0)
 			{
-				int x = (passing & 0xf) - 4;
-				int y = (passing >> 4) - 4;
-				if (whiteTurn)
+				int x = passing & 7;
+				int y = passing >> 3;
+				if (WhiteTurn)
 					y++;
 				else
 					y--;
 				int i = y * 8 + x;
-				if (whiteTurn)
+				if (WhiteTurn)
 				{
 					if ((x > 0) && (chars[i - 1] == 'P'))
 						chars[i] = 'a';
@@ -110,34 +110,26 @@ namespace NSProgram
 		public string GetTnt()
 		{
 			string boaS = GetBoaS();
-			if (!whiteTurn)
+			if (!WhiteTurn)
 				boaS = FlipVBoaS(boaS);
 			return boaS;
 		}
 
-		public string GetTnt(string moves)
-		{
-			StartMoves(moves);
-			return GetTnt();
-		}
-
 		public void SetTnt(string tnt)
 		{
-			whiteTurn = true;
-			castleRights = 0;
-			g_lastCastle = 0;
-			passing = 0;
 			halfMove = 0;
+			castleRights = 0;
+			lastCastle = 0;
+			passing = 0;
 			for (int n = 0; n < tnt.Length; n++)
 			{
-				int index = arrField[n];
 				char c = tnt[n];
 				int piece = char.IsUpper(c) ? colorWhite : colorBlack;
 				switch (char.ToLower(c))
 				{
 					case 'a':
 						piece |= piecePawn;
-						passing = index - 16;
+						passing = n - 8;
 						break;
 					case 'p':
 						piece |= piecePawn;
@@ -179,8 +171,46 @@ namespace NSProgram
 						piece = colorEmpty;
 						break;
 				}
-				g_board[index] = piece;
+				board[n] = piece;
 			}
+		}
+
+		int ScorePos(int x,int y)
+		{
+			int[] ax = new int[8] { 0, 2, 4, 6, 7, 5, 3, 1 };
+			int[] ay = new int[8] { 7, 6, 5, 4, 3, 2, 1, 0 };
+			return (ay[y] << 3) | ax[x];
+		}
+
+		public int MoveScorePos(int emo)
+		{
+			int fr = MoveFr(emo);
+			int to = MoveTo(emo);
+			int fx = SquareX(fr);
+			int tx = SquareX(to);
+			int fy = SquareY(fr);
+			int ty = SquareY(to);
+			if (MoveWhite(emo))
+				return (ScorePos(tx, ty) - ScorePos(fx, fy));
+			return (ScorePos(tx, 7 - ty) - ScorePos(fx, 7 - fy));
+		}
+
+		public bool MoveIsBack(int emo)
+		{
+			if (MoveIsCastling(emo))
+				return false;
+			if (MoveIsCapture(emo))
+				return false;
+			return MoveScorePos(emo) <= 0;
+		}
+
+		public bool MoveIsForth(int emo)
+		{
+			if (MoveIsCastling(emo))
+				return true;
+			if (MoveIsCapture(emo))
+				return true;
+			return MoveScorePos(emo) > 0;
 		}
 
 
