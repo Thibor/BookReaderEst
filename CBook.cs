@@ -87,8 +87,8 @@ namespace NSProgram
 			Program.deleted = 0;
 			if (maxRecords > 0)
 				Program.deleted = recList.Count - maxRecords;
-			else if (maxAge == 0xff)
-				Program.deleted = AgeAvg() >> 5;
+			else if ((maxAge > 0xff - Program.options.oblivion) && (arrAge[0xff] > 0))
+				Program.deleted = recList.Count % 0xff;
 			if (Program.deleted > 0)
 				Delete(Program.deleted);
 			recList.SortTnt();
@@ -536,28 +536,6 @@ namespace NSProgram
 			return el;
 		}
 
-		/*public CEmoList GetEmoList()
-		{
-			score = Math.Abs(score);
-			CEmoList emoList = new CEmoList();
-			List<int> moves = chess.GenerateValidMoves(out _,0);
-			foreach (int m in moves)
-			{
-				chess.MakeMove(m);
-				string tnt = chess.GetTnt();
-				CRec rec = recList.GetRec(tnt);
-				if (rec != null)
-					if ((Math.Abs(rec.score) >= score) || (chess.move50 == 0))
-					{
-						CEmo emo = new CEmo(m, rec);
-						emoList.Add(emo);
-					}
-				chess.UnmakeMove(m);
-			}
-			emoList.SortMat();
-			return emoList;
-		}*/
-
 		public CEmoList GetEmoList(bool backMove = true)
 		{
 			string tnt = chess.GetTnt();
@@ -571,7 +549,7 @@ namespace NSProgram
 				tnt = chess.GetTnt();
 				rec = recList.GetRec(tnt);
 				if (rec != null)
-					if (backMove || ((Math.Abs(rec.score) >= score) || chess.MoveIsForth(m)))
+					if (backMove || chess.MoveIsForth(m))
 					{
 						CEmo emo = new CEmo(m, rec);
 						emoList.Add(emo);
@@ -581,31 +559,6 @@ namespace NSProgram
 			emoList.SortMat();
 			return emoList;
 		}
-
-		/*public CEmoList GetEmoListForth()
-		{
-			string tnt = chess.GetTnt();
-			CRec rec = recList.GetRec(tnt);
-			int score = rec == null ? 0 : Math.Abs(rec.score);
-			CEmoList emoList = new CEmoList();
-			List<int> moves = chess.GenerateValidMoves(out _, 0);
-			foreach (int m in moves)
-			{
-				bool back = chess.MoveIsBack(m);
-				chess.MakeMove(m);
-				tnt = chess.GetTnt();
-				rec = recList.GetRec(tnt);
-				if (rec != null)
-					if ((Math.Abs(rec.score) > score) || !back)
-					{
-						CEmo emo = new CEmo(m, rec);
-						emoList.Add(emo);
-					}
-				chess.UnmakeMove(m);
-			}
-			emoList.SortMat();
-			return emoList;
-		}*/
 
 		public string GetMove(string fen, string moves, int rnd, ref bool bookWrite)
 		{
@@ -782,7 +735,8 @@ namespace NSProgram
 		public void Reset()
 		{
 			for (int n = 0; n < recList.Count; n++)
-				recList[n].depth = 0;
+				if (recList[n].depth > 20)
+					recList[n].depth = 0;
 			SaveToFile();
 		}
 
@@ -805,25 +759,26 @@ namespace NSProgram
 			return false;
 		}
 
+		/// <summary>
+		/// Return all games from book in uci format
+		/// <summary>
 		List<string> GetGames()
 		{
 			List<string> sl = new List<string>();
-			GetGames(string.Empty, 0, 0, 0, 1, ref sl);
+			GetGames(string.Empty, 0, 0, 1, ref sl);
 			Console.WriteLine();
 			Console.WriteLine($"{sl.Count:N0} games");
 			sl.Sort();
 			return sl;
 		}
 
-		bool GetGames(string moves, int ply, short score, double proT, double proU, ref List<string> list)
+		bool GetGames(string moves, int ply, double proT, double proU, ref List<string> list)
 		{
 			bool add = true;
 			if (ply < 12)
 			{
 				chess.SetFen();
 				chess.MakeMoves(moves);
-				//if (chess.IsRepetition(0))return false;
-				//CEmoList el = GetEmoList(score);
 				CEmoList el = GetEmoList(false);
 				if (el.Count > 0)
 				{
@@ -831,8 +786,9 @@ namespace NSProgram
 					for (int n = 0; n < el.Count; n++)
 					{
 						CEmo emo = el[n];
+						string umo = chess.EmoToUmo(emo.emo);
 						double p = proT + n * proU;
-						if (GetGames($"{moves} {chess.EmoToUmo(emo.emo)}".Trim(), ply + 1, emo.rec.score, p, proU, ref list))
+						if (GetGames($"{moves} {umo}".Trim(), ply + 1, p, proU, ref list))
 							add = false;
 					}
 				}

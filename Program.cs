@@ -9,6 +9,15 @@ using System.IO;
 namespace NSProgram
 {
 
+	public class BookOptions
+	{
+		public int oblivion = 1;
+		/// <summary>
+		/// Random moves factor.
+		/// </summary>
+		public int random = 60;
+	}
+
 	class Program
 	{
 		public static int added = 0;
@@ -31,6 +40,7 @@ namespace NSProgram
 		public static CTeacher teacher = new CTeacher();
 		public static CRapIni ini = new CRapIni();
 		public static CRapLog log = new CRapLog(false);
+		public static BookOptions options = new BookOptions();
 
 		public static void LogMsg(string msg, bool condition = true)
 		{
@@ -51,10 +61,6 @@ namespace NSProgram
 			/// Number of moves not found in a row.
 			/// </summary>
 			int emptyRow = 0;
-			/// <summary>
-			/// Random moves factor.
-			/// </summary>
-			int bookRandom = 60;
 			string lastFen = String.Empty;
 			string lastMoves = String.Empty;
 			CUci uci = new CUci();
@@ -63,6 +69,7 @@ namespace NSProgram
 			List<string> listEf = new List<string>();
 			List<string> listEa = new List<string>();
 			List<string> listTf = new List<string>();
+			BookOptions optionsOrg = new BookOptions();
 			for (int n = 0; n < args.Length; n++)
 			{
 				string ac = args[n];
@@ -117,7 +124,7 @@ namespace NSProgram
 								bookLimitAdd = int.TryParse(ac, out int a) ? a : bookLimitAdd;
 								break;
 							case "-rnd":
-								bookRandom = int.TryParse(ac, out int r) ? r : 0;
+								options.random = int.TryParse(ac, out int r) ? r : 0;
 								break;
 							case "-lr":
 								bookLimitR = int.TryParse(ac, out int lr) ? lr : 0;
@@ -239,7 +246,8 @@ namespace NSProgram
 							Console.WriteLine($"option name limit_add_moves type spin default {bookLimitAdd} min 0 max 100");
 							Console.WriteLine($"option name limit_read_ply type spin default {bookLimitR} min 0 max 100");
 							Console.WriteLine($"option name limit_write_ply type spin default {bookLimitW} min 0 max 100");
-							Console.WriteLine($"option name random_moves type spin default {bookRandom} min 0 max 201");
+							Console.WriteLine($"option name random_moves type spin default {optionsOrg.random} min 0 max 201");
+							Console.WriteLine($"option name oblivion type spin default {optionsOrg.oblivion} min 0 max 255");
 							Console.WriteLine("optionend");
 							break;
 						case "setoption":
@@ -267,7 +275,10 @@ namespace NSProgram
 									bookLimitW = uci.GetInt("value");
 									break;
 								case "random_moves":
-									bookRandom = uci.GetInt("value");
+									options.random = uci.GetInt("value");
+									break;
+								case "oblivion":
+									options.oblivion = uci.GetInt("value");
 									break;
 							}
 							break;
@@ -318,7 +329,6 @@ namespace NSProgram
 										last.score = (short)score;
 										rl.UpdateTotal();
 										bookChanged = true;
-										book.AddLog();
 									}
 									teacher.Stop();
 								}
@@ -327,7 +337,7 @@ namespace NSProgram
 					case "go":
 						string move = String.Empty;
 						if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
-							move = book.GetMove(lastFen, lastMoves, bookRandom, ref bookWrite);
+							move = book.GetMove(lastFen, lastMoves, options.random, ref bookWrite);
 						if (String.IsNullOrEmpty(move))
 						{
 							emptyRow++;
@@ -455,7 +465,7 @@ namespace NSProgram
 				if (isW)
 				{
 					bookLimitR = 0;
-					bookRandom = 0;
+					options.random = 0;
 				}
 				return bookLoaded;
 			}
