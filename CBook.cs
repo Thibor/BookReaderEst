@@ -24,7 +24,7 @@ namespace NSProgram
 
 		bool AddFileTnt(string p)
 		{
-			path = p;
+            path = p;
 			string pt = p + ".tmp";
 			try
 			{

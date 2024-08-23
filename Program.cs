@@ -148,7 +148,8 @@ namespace NSProgram
 				teacherFile = ini.Read("teacher>file");
 			}
 			Console.WriteLine($"info string {CHeader.name} ver {CHeader.version}");
-			Process engineProcess;
+            Console.WriteLine($"info string extension {CBook.defExt}");
+            Process engineProcess;
 			if (SetEngineFile(engineFile))
 				Console.WriteLine($"info string engine on");
 			else if (engineFile != string.Empty)
@@ -254,8 +255,8 @@ namespace NSProgram
 							switch (uci.GetValue("name", "value").ToLower())
 							{
 								case "book_file":
-									SetBookFile( uci.GetValue("value"));
-									break;
+                                    SetBookFile( uci.GetValue("value"));
+                                    break;
 								case "teacher_file":
 									teacherFile = uci.GetValue("value");
 									break;
@@ -282,6 +283,8 @@ namespace NSProgram
 									break;
 							}
 							break;
+						case "optionend":
+                            break;
 						default:
 							Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
 							break;
@@ -294,7 +297,7 @@ namespace NSProgram
 				switch (uci.command)
 				{
 					case "position":
-						lastFen = uci.GetValue("fen", "moves");
+                        lastFen = uci.GetValue("fen", "moves");
 						lastMoves = uci.GetValue("moves", "fen");
 						book.chess.SetFen(lastFen);
 						book.chess.MakeMoves(lastMoves);
@@ -333,12 +336,12 @@ namespace NSProgram
 									teacher.Stop();
 								}
 						}
-						break;
+                        break;
 					case "go":
-						string move = String.Empty;
-						if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
+                        string move = String.Empty;
+                        if ((bookLimitR == 0) || (bookLimitR > book.chess.halfMove))
 							move = book.GetMove(lastFen, lastMoves, options.random, ref bookWrite);
-						if (String.IsNullOrEmpty(move))
+                        if (String.IsNullOrEmpty(move))
 						{
 							emptyRow++;
 							if (engineProcess == null)
@@ -358,11 +361,11 @@ namespace NSProgram
 							emptyRow = 0;
 
 						}
-						break;
+                        break;
 				}
 				if (isW)
 				{
-					if (teacher.enabled)
+                    if (teacher.enabled)
 					{
 						teacher.time++;
 						CTData td = teacher.GetTData();
@@ -376,13 +379,17 @@ namespace NSProgram
 						}
 					}
 					if (!bookChanged)
-						bookChanged = book.recList.GetRec().UpdateBack() > 0;
-					if (bookChanged)
 					{
-						bookChanged = false;
-						book.SaveToFile();
+						CRec rec = book.recList.GetRec();
+						if(rec !=null)
+                        bookChanged = rec.UpdateBack() > 0;
 					}
-				}
+                    if (bookChanged)
+					{
+                        bookChanged = false;
+						book.SaveToFile(bookFile);
+					}
+                }
 			} while (uci.command != "quit");
 			teacher.TeacherTerminate();
 
