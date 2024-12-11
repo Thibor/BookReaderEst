@@ -36,9 +36,9 @@ namespace RapLog
 			}
 		}
 
-		public void Add(string m)
+		public void Add(string m,bool force = false)
 		{
-			if (!enabled)
+			if (!enabled && !force)
 				return;
 			List<string> list = List();
 			if (addDate)

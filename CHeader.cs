@@ -1,20 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace NSProgram
+﻿namespace NSProgram
 {
-	internal class CHeader
-	{
-		public const string name = "BookReaderEst";
-		public const string version = "2022-11-17";
+    internal class CHeader
+    {
+        public int oblivion = 0;
+        public const string name = "BookReaderEst";
+        public const string version = "2024-12-11";
 
-		public string GetHeader()
-		{
-			return $"{name} {version}";
-		}
+        public string Title()
+        {
+            return $"{name} {version}";
+        }
 
-	}
+        public string ToStr()
+        {
+            return $"{name} {version} {oblivion}";
+        }
+
+        public bool FromStr(string s)
+        {
+            string[] a = s.Split();
+            if (a.Length > 2)
+                int.TryParse(a[2], out oblivion);
+            return (a[0] == name) && (a[1] == version);
+        }
+
+    }
 }

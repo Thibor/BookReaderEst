@@ -148,13 +148,14 @@ namespace NSChess
 
 		public int SquareX(int sq) => sq & 7;
 		public int SquareY(int sq) => sq >> 3;
-		public int MoveFr(int emo) => emo & 0x3f;
+		public int MoveFrom(int emo) => emo & 0x3f;
 		public int MoveTo(int emo) => (emo >> 8) & 0x3f;
-		public bool MoveWhite(int emo) => (board[MoveFr(emo)] & colorWhite) > 0;
+		public bool MoveWhite(int emo) => (board[MoveFrom(emo)] & colorWhite) > 0;
 		public bool MoveIsCastling(int emo) => (emo & maskCastle) > 0;
-		public bool MoveIsCapture(int emo) => (board[MoveTo(emo)] & 0xf) > 0;
+		public bool MoveIsCapture(int emo) => (board[MoveTo(emo)] & maskRank) > 0;
+        public bool MoveIsPawn(int emo) => (board[MoveFrom(emo)] & maskRank) == piecePawn;
 
-		public bool IsCheck(int emo)
+        public bool IsCheck(int emo)
 		{
 			MakeMove(emo);
 			GenerateAllMoves(!WhiteTurn, true);

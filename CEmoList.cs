@@ -77,7 +77,7 @@ namespace NSProgram
 			}
 		}
 
-		public void SortMat()
+		public void SortScore()
 		{
 			Shuffle();
 			Sort(delegate (CEmo e1, CEmo e2)
@@ -89,13 +89,15 @@ namespace NSProgram
 			});
 		}
 
-		public void SortFlat()
+		public void SortShallow()
 		{
-			Shuffle();
 			Sort(delegate (CEmo e1, CEmo e2)
 			{
-				return e1.rec.depth - e2.rec.depth;
-			});
+				int del = e1.rec.depth - e2.rec.depth;
+                if (del != 0)
+                    return del;
+				return e1.emo - e2.emo;
+            });
 		}
 
 	}

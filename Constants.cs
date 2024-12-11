@@ -12,5 +12,7 @@ namespace NSProgram
 		public static ulong ul = 0xfffffffffffffffful;
 		public static short CHECKMATE_MAX = short.MaxValue;
 		public static short CHECKMATE_NEAR = 0x7000;
-	}
+		public static byte MIN_DEPTH = 0xf;
+        public static byte MAX_DEPTH = 0xff;
+    }
 }

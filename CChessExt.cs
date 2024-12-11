@@ -184,7 +184,7 @@ namespace NSProgram
 
 		public int MoveScorePos(int emo)
 		{
-			int fr = MoveFr(emo);
+			int fr = MoveFrom(emo);
 			int to = MoveTo(emo);
 			int fx = SquareX(fr);
 			int tx = SquareX(to);
@@ -197,20 +197,24 @@ namespace NSProgram
 
 		public bool MoveIsBack(int emo)
 		{
-			if (MoveIsCastling(emo))
+            if (MoveIsCapture(emo))
+                return false;
+            if (MoveIsCastling(emo))
 				return false;
-			if (MoveIsCapture(emo))
-				return false;
-			return MoveScorePos(emo) <= 0;
+            if (MoveIsPawn(emo))
+                return false;
+            return MoveScorePos(emo) <= 0;
 		}
 
 		public bool MoveIsForth(int emo)
 		{
-			if (MoveIsCastling(emo))
+            if (MoveIsCapture(emo))
+                return true;
+            if (MoveIsCastling(emo))
 				return true;
-			if (MoveIsCapture(emo))
-				return true;
-			return MoveScorePos(emo) > 0;
+            if (MoveIsPawn(emo))
+                return true;
+            return MoveScorePos(emo) > 0;
 		}
 
 
