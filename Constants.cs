@@ -14,5 +14,6 @@ namespace NSProgram
 		public static short CHECKMATE_NEAR = 0x7000;
 		public static byte MIN_DEPTH = 0xf;
         public static byte MAX_DEPTH = 0xff;
+		public static string bookFile = "book.est";
     }
 }

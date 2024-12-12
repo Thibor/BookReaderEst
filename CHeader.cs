@@ -5,6 +5,7 @@
         public int oblivion = 0;
         public const string name = "BookReaderEst";
         public const string version = "2024-12-11";
+        public const string extension = "est";
 
         public string Title()
         {

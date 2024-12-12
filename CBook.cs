@@ -720,7 +720,7 @@ namespace NSProgram
             Console.WriteLine($"Depth avg  {recList.DepthAvg():N4}");
             Console.WriteLine($"Depth low  {recList.ProDepthLow():N4} %");
             Console.WriteLine($"Score zero {ProZeroScore():N2} %");
-            string frm = "{0,8} {1,8:N0} {2,8:N4} %";
+            string frm = "{0,8} {1,8:N0} {2,8:P4} %";
             Console.WriteLine();
             Console.WriteLine(frm, "depth", "count", "procent");
             int l = 0;

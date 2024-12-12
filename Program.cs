@@ -3,6 +3,7 @@ using RapIni;
 using RapLog;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 
@@ -158,14 +159,14 @@ namespace NSProgram
             string teacherFile = String.Join(" ", listTf);
             if (args.Length == 0)
             {
-                bookFile = ini.Read("book>file");
+                bookFile = ini.Read("book",Constants.bookFile);
                 engineFile = ini.Read("engine>file");
                 engineArguments = ini.Read("engine>arguments");
                 teacherFile = ini.Read("teacher>file");
             }
-            Console.WriteLine($"info string name {CHeader.name}");
-            Console.WriteLine($"info string version {CHeader.version}");
-            Console.WriteLine($"info string extension est");
+            Console.WriteLine($"idbook name {CHeader.name}");
+            Console.WriteLine($"idbook version {CHeader.version}");
+            Console.WriteLine($"idbook extension {CHeader.extension}");
             Process engineProcess;
             if (SetEngineFile(engineFile))
                 Console.WriteLine($"info string engine on");
@@ -177,15 +178,16 @@ namespace NSProgram
             else if (teacherFile != string.Empty)
                 Console.WriteLine($"info string missing file [{teacherFile}]");
             bool bookLoaded = SetBookFile(bookFile);
+            bool help = false;
             do
             {
                 string msg = Console.ReadLine().Trim();
-                if (String.IsNullOrEmpty(msg) || (msg == "help") || (msg == "book"))
+                if (help || String.IsNullOrEmpty(msg) || (msg == "help") || (msg == "book"))
                 {
-                    Console.WriteLine("book load [filename].[mem|pgn|uci|fen] - clear and add moves from file");
-                    Console.WriteLine("book save [filename].[mem] - save book to the file");
+                    Console.WriteLine("book load [filename].[mem|pgn|uci] - clear and add moves from file");
+                    Console.WriteLine("book save [filename].[mem|pgn|uci] - save book to the file");
                     Console.WriteLine("book delete [number x] - delete x moves from the book");
-                    Console.WriteLine("book addfile [filename].[mem|png|uci|fen] - add moves to the book from file");
+                    Console.WriteLine("book addfile [filename].[mem|png|uci] - add moves to the book from file");
                     Console.WriteLine("book adduci [uci] - add moves in uci format to the book");
                     Console.WriteLine("book addfen [fen] - add position in fen format");
                     Console.WriteLine("book clear - clear all moves from the book");
@@ -193,6 +195,7 @@ namespace NSProgram
                     Console.WriteLine("book info - show extra informations of current book");
                     Console.WriteLine("book getoption - show options");
                     Console.WriteLine("book setoption name [option name] value [option value] - set option");
+                    help = false;
                     continue;
                 }
                 uci.SetMsg(msg);
@@ -317,8 +320,12 @@ namespace NSProgram
                                     break;
                             }
                             break;
+                        case "help":
+                            help = true;
+                            break;
                         default:
                             Console.WriteLine($"Unknown command [{uci.tokens[1]}]");
+                            Console.WriteLine($"book help - show console commands");
                             break;
                     }
                     continue;
